@@ -21,9 +21,9 @@ use \Workerman\Autoloader;
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 // gateway 进程，这里使用Text协议，可以用telnet测试
-$gateway = new Gateway("Text://0.0.0.0:7272");
+$gateway = new Gateway("Websocket://0.0.0.0:7272");
 // gateway名称，status方便查看
-$gateway->name = 'test';
+$gateway->name = 'Websocket-test';
 // gateway进程数
 $gateway->count = 4;
 // 本机ip，分布式部署时使用内网ip
@@ -62,4 +62,3 @@ if(!defined('GLOBAL_START'))
 {
     Worker::runAll();
 }
-
