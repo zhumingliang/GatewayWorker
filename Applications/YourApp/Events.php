@@ -17,6 +17,7 @@
  * 如果发现业务卡死，可以将下面declare打开（去掉//注释），并执行php start.php reload
  * 然后观察一段时间workerman.log看是否有process_timeout异常
  */
+
 //declare(ticks=1);
 
 use \GatewayWorker\Lib\Gateway;
@@ -31,35 +32,40 @@ class Events
     /**
      * 当客户端连接时触发
      * 如果业务不需此回调可以删除onConnect
-     * 
+     *
      * @param int $client_id 连接id
      */
     public static function onConnect($client_id)
     {
-        // 向当前client_id发送数据 
+        Gateway::sendToClient($client_id, json_encode(array(
+            'type' => 'init',
+            'client_id' => $client_id
+        )));
+
+      /*  // 向当前client_id发送数据
         Gateway::sendToClient($client_id, "Hello $client_id\r\n");
         // 向所有人发送
-        Gateway::sendToAll("$client_id login\r\n");
+        Gateway::sendToAll("$client_id login\r\n");*/
     }
-    
-   /**
-    * 当客户端发来消息时触发
-    * @param int $client_id 连接id
-    * @param mixed $message 具体消息
-    */
-   public static function onMessage($client_id, $message)
-   {
+
+    /**
+     * 当客户端发来消息时触发
+     * @param int $client_id 连接id
+     * @param mixed $message 具体消息
+     */
+    public static function onMessage($client_id, $message)
+    {
         // 向所有人发送 
         Gateway::sendToAll("$client_id said $message\r\n");
-   }
-   
-   /**
-    * 当用户断开连接时触发
-    * @param int $client_id 连接id
-    */
-   public static function onClose($client_id)
-   {
-       // 向所有人发送 
-       GateWay::sendToAll("$client_id logout\r\n");
-   }
+    }
+
+    /**
+     * 当用户断开连接时触发
+     * @param int $client_id 连接id
+     */
+    public static function onClose($client_id)
+    {
+        // 向所有人发送
+        GateWay::sendToAll("$client_id logout\r\n");
+    }
 }
