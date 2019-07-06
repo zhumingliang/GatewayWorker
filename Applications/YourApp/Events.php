@@ -79,6 +79,7 @@ class Events
                 'errorCode' => 1,
                 'msg' => '用户信息没有和websocket绑定，需要重新绑定'
             ]));
+            return;
         }
 
         $message = json_decode($message, true);
