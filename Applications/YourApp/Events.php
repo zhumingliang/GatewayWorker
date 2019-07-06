@@ -103,6 +103,8 @@ class Events
                     array(
                         'lat' => $v['lat'],
                         'lng' => $v['lng'],
+                        'create_time' => date("Y-m-d H:i:s", time()),
+                        'update_time' => date("Y-m-d H:i:s", time()),
                         'o_id' => key_exists('o_id') ? $v['o_id'] : '',
                         'u_id' => $u_id
                     )
