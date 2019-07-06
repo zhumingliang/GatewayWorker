@@ -5,6 +5,7 @@
       <path value="$PROJECT_DIR$/vendor/workerman/gateway-worker" />
       <path value="$PROJECT_DIR$/vendor/workerman/workerman" />
       <path value="$PROJECT_DIR$/vendor/composer" />
+      <path value="$PROJECT_DIR$/vendor/workerman/mysql" />
     </include_path>
   </component>
 </project>
