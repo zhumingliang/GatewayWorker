@@ -74,13 +74,17 @@ class Events
     {
 
         $u_id = Gateway::getUidByClientId($client_id);
-        // 向所有人发送 
-        //  Gateway::sendToAll("$client_id said $u_id\r\n");
+        if (!$u_id) {
+            Gateway::sendToClient($client_id, json_encode([
+                'errorCode' => 1,
+                'msg' => '用户信息没有和websocket绑定，需要重新绑定'
+            ]));
+        }
 
         $message = json_decode($message, true);
         if (!key_exists('type', $message)) {
             $return_data = [
-                'errorCode' => 1,
+                'errorCode' => 2,
                 'msg' => '非法请求'
             ];
             Gateway::sendToClient($client_id, json_encode($return_data));
@@ -92,7 +96,7 @@ class Events
             $locations = $message['locations'];
             if (!count($locations)) {
                 Gateway::sendToClient($client_id, json_encode([
-                    'errorCode' => 2,
+                    'errorCode' => 3,
                     'msg' => '地理位置信息不能为空'
                 ]));
                 return;
@@ -109,6 +113,12 @@ class Events
                         'u_id' => $u_id
                     )
                 )->query();
+
+                Gateway::sendToClient($client_id, json_encode([
+                    'errorCode' => 0,
+                    'msg' => 'success'
+                ]));
+                return;
             }
 
 
