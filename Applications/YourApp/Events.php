@@ -108,6 +108,7 @@ class Events
                     array(
                         'lat' => $v['lat'],
                         'lng' => $v['lng'],
+                        'phone_code' => $v['phone_code'],
                         'create_time' => date("Y-m-d H:i:s", time()),
                         'update_time' => date("Y-m-d H:i:s", time()),
                         'o_id' => key_exists('o_id') ? $v['o_id'] : '',
@@ -135,6 +136,6 @@ class Events
     public static function onClose($client_id)
     {
         // 向所有人发送
-        GateWay::sendToAll("$client_id logout\r\n");
+        //GateWay::sendToAll("$client_id logout\r\n");
     }
 }
