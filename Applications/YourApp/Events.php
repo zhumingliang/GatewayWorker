@@ -127,16 +127,15 @@ class Events
                         //1.先删除旧的实时地理位置
                         self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
                         //2.新增新的实时地理位子
-                        self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lat'], $v['lng'], $u_id);
+                        self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lng'],$v['lat'], $u_id);
                     }
 
-                    Gateway::sendToClient($client_id, json_encode([
-                        'errorCode' => 0,
-                        'msg' => 'success'
-                    ]));
-                    return;
                 }
-
+                Gateway::sendToClient($client_id, json_encode([
+                    'errorCode' => 0,
+                    'msg' => 'success'
+                ]));
+                return;
 
             }
         } catch (Exception $e) {
