@@ -45,8 +45,7 @@ class Events
         self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
             '16273', 'cdb_outerroot', 'Libo1234', 'drive');
 
-        self::$redis = new Redis();
-        self::$redis->connect('127.0.0.1', 6379, 60);
+
     }
 
 
@@ -77,63 +76,76 @@ class Events
     public static function onMessage($client_id, $message)
     {
 
-        $u_id = Gateway::getUidByClientId($client_id);
-        if (!$u_id) {
-            Gateway::sendToClient($client_id, json_encode([
-                'errorCode' => 1,
-                'msg' => '用户信息没有和websocket绑定，需要重新绑定'
-            ]));
-            return;
-        }
+        try {
 
-        $message = json_decode($message, true);
-        if (!key_exists('type', $message)) {
-            $return_data = [
-                'errorCode' => 2,
-                'msg' => '非法请求'
-            ];
-            Gateway::sendToClient($client_id, json_encode($return_data));
-            return;
-        }
-        $type = $message['type'];
-        if ($type == 'location' && key_exists('locations', $message)) {
-            $locations = $message['locations'];
-            if (!count($locations)) {
+
+            self::$redis = new Redis();
+            self::$redis->connect('127.0.0.1', 6379, 60);
+
+            $u_id = Gateway::getUidByClientId($client_id);
+            if (!$u_id) {
                 Gateway::sendToClient($client_id, json_encode([
-                    'errorCode' => 3,
-                    'msg' => '地理位置信息不能为空'
+                    'errorCode' => 1,
+                    'msg' => '用户信息没有和websocket绑定，需要重新绑定'
                 ]));
                 return;
             }
-            foreach ($locations as $k => $v) {
-                self::$db->insert('drive_location_t')->cols(
-                    array(
-                        'lat' => $v['lat'],
-                        'lng' => $v['lng'],
-                        'phone_code' => $v['phone_code'],
-                        'create_time' => $v['create_time'],
-                        'update_time' => $v['create_time'],
-                        'o_id' => key_exists('o_id') ? $v['o_id'] : '',
-                        'u_id' => $u_id
-                    )
-                )->query();
-                if ($k == 0) {
-                    //将地理位置存储到redis
-                    //1.先删除旧的实时地理位置
-                    self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
-                    //2.新增新的实时地理位子
-                    self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lat'], $v['lng'], $u_id);
+
+            $message = json_decode($message, true);
+            if (!key_exists('type', $message)) {
+                $return_data = [
+                    'errorCode' => 2,
+                    'msg' => '非法请求'
+                ];
+                Gateway::sendToClient($client_id, json_encode($return_data));
+                return;
+            }
+            $type = $message['type'];
+            if ($type == 'location' && key_exists('locations', $message)) {
+                $locations = $message['locations'];
+                if (!count($locations)) {
+                    Gateway::sendToClient($client_id, json_encode([
+                        'errorCode' => 3,
+                        'msg' => '地理位置信息不能为空'
+                    ]));
+                    return;
+                }
+                foreach ($locations as $k => $v) {
+                    self::$db->insert('drive_location_t')->cols(
+                        array(
+                            'lat' => $v['lat'],
+                            'lng' => $v['lng'],
+                            'phone_code' => $v['phone_code'],
+                            'create_time' => $v['create_time'],
+                            'update_time' => $v['create_time'],
+                            'o_id' => key_exists('o_id') ? $v['o_id'] : '',
+                            'u_id' => $u_id
+                        )
+                    )->query();
+                    if ($k == 0) {
+                        //将地理位置存储到redis
+                        //1.先删除旧的实时地理位置
+                        self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
+                        //2.新增新的实时地理位子
+                        self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lat'], $v['lng'], $u_id);
+                    }
+
+                    Gateway::sendToClient($client_id, json_encode([
+                        'errorCode' => 0,
+                        'msg' => 'success'
+                    ]));
+                    return;
                 }
 
-                Gateway::sendToClient($client_id, json_encode([
-                    'errorCode' => 0,
-                    'msg' => 'success'
-                ]));
-                return;
+
             }
-
-
+        } catch (Exception $e) {
+            Gateway::sendToClient($client_id, json_encode([
+                'errorCode' => 3,
+                'msg' => $e->getMessage()
+            ]));
         }
+
 
     }
 
