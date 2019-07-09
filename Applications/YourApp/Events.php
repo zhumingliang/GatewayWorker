@@ -35,6 +35,7 @@ class Events
      * 新建一个类的静态成员，用来保存数据库实例
      */
     public static $db = null;
+    public static $redis = null;
 
     /**
      * 进程启动后初始化数据库连接
@@ -43,6 +44,9 @@ class Events
     {
         self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
             '16273', 'cdb_outerroot', 'Libo1234', 'drive');
+
+        self::$redis = new Redis();
+        self::$redis->connect('127.0.0.1', 6379, 60);
     }
 
 
@@ -91,7 +95,6 @@ class Events
             Gateway::sendToClient($client_id, json_encode($return_data));
             return;
         }
-
         $type = $message['type'];
         if ($type == 'location' && key_exists('locations', $message)) {
             $locations = $message['locations'];
@@ -102,19 +105,25 @@ class Events
                 ]));
                 return;
             }
-
             foreach ($locations as $k => $v) {
                 self::$db->insert('drive_location_t')->cols(
                     array(
                         'lat' => $v['lat'],
                         'lng' => $v['lng'],
                         'phone_code' => $v['phone_code'],
-                        'create_time' => date("Y-m-d H:i:s", time()),
-                        'update_time' => date("Y-m-d H:i:s", time()),
+                        'create_time' => $v['create_time'],
+                        'update_time' => $v['create_time'],
                         'o_id' => key_exists('o_id') ? $v['o_id'] : '',
                         'u_id' => $u_id
                     )
                 )->query();
+                if ($k == 0) {
+                    //将地理位置存储到redis
+                    //1.先删除旧的实时地理位置
+                    self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
+                    //2.新增新的实时地理位子
+                    self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lat'], $v['lng'], $u_id);
+                }
 
                 Gateway::sendToClient($client_id, json_encode([
                     'errorCode' => 0,
@@ -125,7 +134,6 @@ class Events
 
 
         }
-
 
     }
 
