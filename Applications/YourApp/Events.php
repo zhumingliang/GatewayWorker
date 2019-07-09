@@ -122,12 +122,12 @@ class Events
                             'u_id' => $u_id
                         )
                     )->query();
-                    if ($k == 0) {
+                  //  if ($k == 0) {
                         //将地理位置存储到redis
                         //1.先删除旧的实时地理位置
-                        self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
+                        self::$redis->rawCommand('zrem', 'drivers_tongling', $k+1);
                         //2.新增新的实时地理位子
-                        $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lng'], $v['lat'], $u_id);
+                        $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lng'], $v['lat'], $k+1);
                         if (!$ret) {
                             Gateway::sendToClient($client_id, json_encode([
                                 'errorCode' => 7,
@@ -135,7 +135,7 @@ class Events
                             ]));
                             return;
                         }
-                    }
+                   // }
 
                 }
 
