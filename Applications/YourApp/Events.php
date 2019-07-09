@@ -118,7 +118,7 @@ class Events
                             'phone_code' => $v['phone_code'],
                             'create_time' => $v['create_time'],
                             'update_time' => $v['create_time'],
-                            'o_id' => key_exists('o_id') ? $v['o_id'] : '',
+                            'o_id' => key_exists('o_id', $v) ? $v['o_id'] : '',
                             'u_id' => $u_id
                         )
                     )->query();
