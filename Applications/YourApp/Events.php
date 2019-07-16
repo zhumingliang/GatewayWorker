@@ -179,7 +179,6 @@ class Events
             return $res;
         }
         if ($old_lng == 0 || $old_lat == 0 || $new_lng == 0 || $new_lat == 0) {
-
             $dis = 0;
         } else {
             $dis = self::GetDistance($old_lng, $old_lat, $new_lng, $new_lat);
