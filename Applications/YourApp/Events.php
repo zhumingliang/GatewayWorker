@@ -59,10 +59,17 @@ class Events
      */
     public static function onConnect($client_id)
     {
-        Gateway::sendToClient($client_id, json_encode(array(
-            'type' => 'init',
-            'client_id' => $client_id
-        )));
+
+        $data = [
+            'errorCode' => 0,
+            'msg' => 'success',
+            'data' => [
+                'type' => 'init',
+                'client_id' => $client_id
+            ]
+
+        ];
+        Gateway::sendToClient($client_id, json_encode($data));
 
         /*  // 向当前client_id发送数据
           Gateway::sendToClient($client_id, "Hello $client_id\r\n");
