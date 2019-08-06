@@ -48,6 +48,8 @@ class Events
 
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
+
+
     }
 
 
@@ -140,6 +142,11 @@ class Events
                 array(
                     'lat' => $v['lat'],
                     'lng' => $v['lng'],
+                    'citycode' => $v['citycode'],
+                    'city' => $v['city'],
+                    'district' => $v['district'],
+                    'street' => $v['street'],
+                    'addr' => $v['addr'],
                     'phone_code' => $v['phone_code'],
                     'create_time' => $v['create_time'],
                     'update_time' => $v['create_time'],
@@ -148,12 +155,29 @@ class Events
                     'u_id' => $u_id
                 )
             )->query();
+            $driver = self::$db->select('id,username,phone')->from('drive_driver_t')
+                ->where('id= :id')->bindValues(array('id' => $u_id))->row();
+
             if ($k == 0) {
                 //将地理位置存储到redis,并更新行动距离
                 //1.先删除旧的实时地理位置
                 self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
-                //2.新增新的实时地理位子
+                //2.新增新的实时地理位置
                 $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lng'], $v['lat'], $u_id);
+                //3.保存司机位置名称信息
+                $location_data = [
+                    'username' => $driver ? $driver['username'] : '',
+                    'phone' => $driver ? $driver['phone'] : '',
+                    'lat' => $v['lat'],
+                    'lng' => $v['lng'],
+                    'citycode' => $v['citycode'],
+                    'city' => $v['city'],
+                    'district' => $v['district'],
+                    'street' => $v['street'],
+                    'addr' => $v['addr']
+                ];
+
+                self::$redis->rPush("driver:$u_id:location", json_encode($location_data));
                 if (!$ret) {
                     Gateway::sendToClient($client_id, json_encode([
                         'errorCode' => 7,
