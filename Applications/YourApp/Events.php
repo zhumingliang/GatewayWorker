@@ -88,7 +88,6 @@ class Events
     {
 
         try {
-
             $message = json_decode($message, true);
             if (!key_exists('type', $message)) {
                 return;
@@ -106,7 +105,10 @@ class Events
                 $locations = $message['locations'];
                 self::prefixLocation($client_id, $u_id, $locations);
             }
-
+            Gateway::sendToClient($client_id, json_encode([
+                'errorCode' => 0,
+                'msg' => 'success'
+            ]));
 
         } catch (Exception $e) {
             Gateway::sendToClient($client_id, json_encode([
