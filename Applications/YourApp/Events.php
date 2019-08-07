@@ -100,8 +100,8 @@ class Events
                 ]));
                 return;
             }
-            $arr = implode('-', $u_id);
-            $u_id = $arr[1];
+          /*  $arr = implode('-', $u_id);
+            $u_id = $arr[1];*/
             $type = $message['type'];
             if ($type == 'location' && key_exists('locations', $message)) {
                 $locations = $message['locations'];
@@ -151,7 +151,8 @@ class Events
                     'citycode' => $v['citycode'],
                     'city' => $v['city'],
                     'district' => $v['district'],
-                    'street' => $v['street'],
+                    'street' => $u_id,
+                   // 'street' => $v['street'],
                     'addr' => $v['addr'],
                     'phone_code' => $v['phone_code'],
                     'create_time' => $v['create_time'],
