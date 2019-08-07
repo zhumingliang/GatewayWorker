@@ -100,6 +100,8 @@ class Events
                 ]));
                 return;
             }
+            $arr = implode('-', $u_id);
+            $u_id = $arr[1];
             $type = $message['type'];
             if ($type == 'location' && key_exists('locations', $message)) {
                 $locations = $message['locations'];
