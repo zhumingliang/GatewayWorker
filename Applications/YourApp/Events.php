@@ -107,6 +107,7 @@ class Events
             }
             Gateway::sendToClient($client_id, json_encode([
                 'errorCode' => 0,
+                'type' => 'uploadlocation',
                 'msg' => 'success'
             ]));
 
@@ -115,6 +116,7 @@ class Events
                 'errorCode' => 3,
                 'msg' => $e->getMessage()
             ]));
+            throw $e;
         }
 
 
