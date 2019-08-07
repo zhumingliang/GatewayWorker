@@ -65,8 +65,8 @@ class Events
         $data = [
             'errorCode' => 0,
             'msg' => 'success',
+            'type' => 'init',
             'data' => [
-                'type' => 'init',
                 'client_id' => $client_id
             ]
 
