@@ -148,6 +148,7 @@ class Events
                     'district' => $v['district'],
                     'street' => $v['street'],
                     'addr' => $v['addr'],
+                    'locationdescribe' => $v['locationdescribe'],
                     'phone_code' => $v['phone_code'],
                     'create_time' => $v['create_time'],
                     'update_time' => $v['create_time'],
