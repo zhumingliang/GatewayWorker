@@ -175,7 +175,8 @@ class Events
                     'city' => $v['city'],
                     'district' => $v['district'],
                     'street' => $v['street'],
-                    'addr' => $v['addr']
+                    'addr' => $v['addr'],
+                    'locationdescribe' => $v['locationdescribe']
                 ];
 
                 self::$redis->rPush("driver:$u_id:location", json_encode($location_data));
