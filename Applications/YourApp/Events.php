@@ -101,13 +101,16 @@ class Events
             if ($type == 'location' && key_exists('locations', $message)) {
                 $locations = $message['locations'];
                 self::prefixLocation($client_id, $u_id, $locations);
+            } else if ($type == "receivePush") {
+                $p_id = $message['p_id'];
+                self::receivePush($p_id);
             }
+
             Gateway::sendToClient($client_id, json_encode([
                 'errorCode' => 0,
                 'type' => 'uploadlocation',
                 'msg' => 'success'
             ]));
-
         } catch (Exception $e) {
             Gateway::sendToClient($client_id, json_encode([
                 'errorCode' => 3,
@@ -116,6 +119,12 @@ class Events
             throw $e;
         }
 
+
+    }
+
+    private static function receivePush($p_id)
+    {
+        self::$db->update('drive_order_push_t')->cols(array('receive' => 1))->where('id=' . $p_id)->query();
 
     }
 
@@ -233,6 +242,7 @@ class Events
         $s = round($s * 10000) / 10000;
         return $s;
     }
+
 
     /**
      * 当用户断开连接时触发
