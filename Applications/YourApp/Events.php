@@ -104,6 +104,9 @@ class Events
             } else if ($type == "receivePush") {
                 $p_id = $message['p_id'];
                 self::receivePush($p_id);
+            } else if ($type == "MINIPush") {
+                $p_id = $message['p_id'];
+                self::MINIPush($p_id);
             }
 
             Gateway::sendToClient($client_id, json_encode([
@@ -126,6 +129,14 @@ class Events
     {
         self::$db->update('drive_order_push_t')->cols(array('receive' => 1))->where('id=' . $p_id)->query();
 
+    }
+
+    private static function MINIPush($id, $u_id)
+    {
+        /*        self::$db->update('drive_mini_push_t')
+                    ->cols(array('state' => 3))
+                    ->where('id=' . $p_id)->query();*/
+        self::$db->query("UPDATE `drive_mini_push_t` SET `state` = 3 WHERE o_id=" . $id . " AND u_id=" . $u_id);
     }
 
     private static function prefixLocation($client_id, $u_id, $locations)
