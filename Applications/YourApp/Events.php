@@ -105,8 +105,9 @@ class Events
                 $p_id = $message['p_id'];
                 self::receivePush($p_id);
             } else if ($type == "MINIPush") {
-                $p_id = $message['p_id'];
-                self::MINIPush($p_id);
+                $id = $message['id'];
+                $u_id = $message['u_id'];
+                self::MINIPush($id, $u_id);
             }
 
             Gateway::sendToClient($client_id, json_encode([
