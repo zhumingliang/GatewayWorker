@@ -87,20 +87,26 @@ class Events
             if (!key_exists('type', $message)) {
                 return;
             }
-            $u_id = Gateway::getUidByClientId($client_id);
-            if (!$u_id) {
-                Gateway::sendToClient($client_id, json_encode([
-                    'errorCode' => 1,
-                    'msg' => '用户信息没有和websocket绑定，需要重新绑定'
-                ]));
-                return;
-            }
-            $arr = explode('-', $u_id);
-            $u_id = $arr[1];
             $type = $message['type'];
             if ($type == 'location' && key_exists('locations', $message)) {
                 $locations = $message['locations'];
+                $u_id = Gateway::getUidByClientId($client_id);
+                if (!$u_id) {
+                    Gateway::sendToClient($client_id, json_encode([
+                        'errorCode' => 1,
+                        'msg' => '用户信息没有和websocket绑定，需要重新绑定'
+                    ]));
+                    return;
+                }
+                $arr = explode('-', $u_id);
+                $u_id = $arr[1];
                 self::prefixLocation($client_id, $u_id, $locations);
+                Gateway::sendToClient($client_id, json_encode([
+                    'errorCode' => 0,
+                    'type' => 'uploadlocation',
+                    'msg' => 'success'
+                ]));
+
             } else if ($type == "receivePush") {
                 $p_id = $message['p_id'];
                 self::receivePush($p_id);
@@ -108,13 +114,24 @@ class Events
                 $id = $message['id'];
                 $u_id = $message['u_id'];
                 self::MINIPush($id, $u_id);
+            }else if ($type=='checkOnline'){
+                if (self::checkOnline($client_id)){
+                    Gateway::sendToClient($client_id, json_encode([
+                        'errorCode' => 0,
+                        'type' => 'checkOnline',
+                        'msg' => 'success'
+                    ]));
+                }else{
+                    Gateway::sendToClient($client_id, json_encode([
+                        'errorCode' => 1,
+                        'type' => 'checkOnline',
+                        'msg' => 'fail'
+                    ]));
+                }
+
             }
 
-            Gateway::sendToClient($client_id, json_encode([
-                'errorCode' => 0,
-                'type' => 'uploadlocation',
-                'msg' => 'success'
-            ]));
+
         } catch (Exception $e) {
             Gateway::sendToClient($client_id, json_encode([
                 'errorCode' => 3,
@@ -125,6 +142,17 @@ class Events
 
 
     }
+
+    private static function checkOnline($client_id){
+        $u_id = Gateway::getUidByClientId($client_id);
+        if (!$u_id) {
+            return 0;
+        }
+        $arr = explode('-', $u_id);
+        $u_id = $arr[1];
+        return $u_id ;
+
+}
 
     private static function receivePush($p_id)
     {
