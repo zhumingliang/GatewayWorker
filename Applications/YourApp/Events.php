@@ -100,11 +100,12 @@ class Events
                 }
                 $arr = explode('-', $u_id);
                 $u_id = $arr[1];
-                self::prefixLocation($client_id, $u_id, $locations);
+                $location_ids = self::prefixLocation($client_id, $u_id, $locations);
                 Gateway::sendToClient($client_id, json_encode([
                     'errorCode' => 0,
                     'type' => 'uploadlocation',
-                    'msg' => 'success'
+                    'msg' => 'success',
+                    'ids' => $location_ids
                 ]));
 
             } else if ($type == "receivePush") {
@@ -114,14 +115,14 @@ class Events
                 $id = $message['id'];
                 $u_id = $message['u_id'];
                 self::MINIPush($id, $u_id);
-            }else if ($type=='checkOnline'){
-                if (self::checkOnline($client_id)){
+            } else if ($type == 'checkOnline') {
+                if (self::checkOnline($client_id)) {
                     Gateway::sendToClient($client_id, json_encode([
                         'errorCode' => 0,
                         'type' => 'checkOnline',
                         'msg' => 'success'
                     ]));
-                }else{
+                } else {
                     Gateway::sendToClient($client_id, json_encode([
                         'errorCode' => 1,
                         'type' => 'checkOnline',
@@ -143,16 +144,17 @@ class Events
 
     }
 
-    private static function checkOnline($client_id){
+    private static function checkOnline($client_id)
+    {
         $u_id = Gateway::getUidByClientId($client_id);
         if (!$u_id) {
             return 0;
         }
         $arr = explode('-', $u_id);
         $u_id = $arr[1];
-        return $u_id ;
+        return $u_id;
 
-}
+    }
 
     private static function receivePush($p_id)
     {
@@ -171,7 +173,6 @@ class Events
     private static function prefixLocation($client_id, $u_id, $locations)
     {
 
-
         if (!count($locations)) {
             Gateway::sendToClient($client_id, json_encode([
                 'errorCode' => 3,
@@ -187,7 +188,9 @@ class Events
             $old_lat = $old_location[0][1];
         }
 
+        $location_ids = [];
         foreach ($locations as $k => $v) {
+            array_push($location_ids, $v['locationId']);
             self::$db->insert('drive_location_t')->cols(
                 array(
                     'lat' => $v['lat'],
@@ -201,6 +204,7 @@ class Events
                     'phone_code' => $v['phone_code'],
                     'create_time' => $v['create_time'],
                     'update_time' => $v['create_time'],
+                    'location_id' => $v['locationId'],
                     'o_id' => key_exists('o_id', $v) ? $v['o_id'] : '',
                     'begin' => key_exists('begin', $v) ? $v['begin'] : 2,
                     'u_id' => $u_id
@@ -240,7 +244,8 @@ class Events
             }
 
             if (key_exists('o_id', $v) && strlen($v['o_id'])
-                && key_exists('begin', $v) && $v['begin' == 1]) {
+                && key_exists('begin', $v) && $v['begin' == 1]
+            ) {
                 self::prefixDistance($v['o_id'], $old_lng, $old_lat, $v['lng'], $v['lat']);
             }
 
@@ -248,7 +253,7 @@ class Events
             $old_lat = $v['lng'];
 
         }
-
+        return implode(',', $location_ids);
 
     }
 
