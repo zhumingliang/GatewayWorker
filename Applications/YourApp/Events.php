@@ -303,7 +303,7 @@ class Events
             array(
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s'),
-                'u_id' => $u_id
+                'u_id' => $client_id
             )
         )->query();
     }
