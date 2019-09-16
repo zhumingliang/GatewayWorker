@@ -205,6 +205,7 @@ class Events
                     'create_time' => $v['create_time'],
                     'update_time' => $v['create_time'],
                     'location_id' => $v['locationId'],
+                    'loc_type' => $v['locType'],
                     'o_id' => key_exists('o_id', $v) ? $v['o_id'] : '',
                     'begin' => key_exists('begin', $v) ? $v['begin'] : 2,
                     'u_id' => $u_id
@@ -297,5 +298,13 @@ class Events
     {
         // 向所有人发送
         //GateWay::sendToAll("$client_id logout\r\n");
+        $u_id = Gateway::getUidByClientId($client_id);
+        self::$db->insert('drive_socket_closed_t')->cols(
+            array(
+                'create_time' => date('Y-m-d H:i:s'),
+                'update_time' => date('Y-m-d H:i:s'),
+                'u_id' => $u_id
+            )
+        )->query();
     }
 }
