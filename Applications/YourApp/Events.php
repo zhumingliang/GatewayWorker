@@ -298,12 +298,12 @@ class Events
     {
         // 向所有人发送
         //GateWay::sendToAll("$client_id logout\r\n");
-        $u_id = Gateway::getUidByClientId($client_id);
         self::$db->insert('drive_socket_closed_t')->cols(
             array(
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s'),
-                'u_id' => $client_id
+                'client_id' => $client_id,
+                'u_id' => self::checkOnline($client_id)
             )
         )->query();
     }
