@@ -204,6 +204,7 @@ class Events
                     'phone_code' => $v['phone_code'],
                     'create_time' => $v['create_time'],
                     'update_time' => $v['create_time'],
+                    'up_time' =>date('Y-m-d H:i:s'),
                     'location_id' => $v['locationId'],
                     'loc_type' => $v['locType'],
                     'o_id' => key_exists('o_id', $v) ? $v['o_id'] : '',
