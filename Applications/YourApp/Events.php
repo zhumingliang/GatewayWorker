@@ -180,17 +180,23 @@ class Events
             ]));
             return;
         }
-        $old_lng = 0;
-        $old_lat = 0;
-        $old_location = self::$redis->rawCommand('geopos', 'drivers_tongling', $u_id);
-        if ($old_location) {
-            $old_lng = $old_location[0][0];
-            $old_lat = $old_location[0][1];
-        }
 
         $location_ids = [];
         foreach ($locations as $k => $v) {
             array_push($location_ids, $v['locationId']);
+            if ($k == 0) {
+                //将地理位置存储到redis,并更新行动距离
+                //1.先删除旧的实时地理位置
+                self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
+                //2.新增新的实时地理位置
+                $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lng'], $v['lat'], $u_id);
+                if (!$ret) {
+                    Gateway::sendToClient($client_id, json_encode([
+                        'errorCode' => 7,
+                        'msg' => '写入redis失败'
+                    ]));
+                }
+            }
             self::$db->insert('drive_location_t')->cols(
                 array(
                     'lat' => $v['lat'],
@@ -212,70 +218,12 @@ class Events
                     'u_id' => $u_id
                 )
             )->query();
-            $driver = self::$db->select('id,username,phone')->from('drive_driver_t')
-                ->where('id= :id')->bindValues(array('id' => $u_id))->row();
-
-            if ($k == 0) {
-                //将地理位置存储到redis,并更新行动距离
-                //1.先删除旧的实时地理位置
-                self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
-                //2.新增新的实时地理位置
-                $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $v['lng'], $v['lat'], $u_id);
-                //3.保存司机位置名称信息
-                $location_data = [
-                    'username' => $driver ? $driver['username'] : '',
-                    'phone' => $driver ? $driver['phone'] : '',
-                    'lat' => $v['lat'],
-                    'lng' => $v['lng'],
-                    'citycode' => $v['citycode'],
-                    'city' => $v['city'],
-                    'district' => $v['district'],
-                    'street' => $v['street'],
-                    'addr' => $v['addr'],
-                    'locationdescribe' => $v['locationdescribe']
-                ];
-
-                self::$redis->rPush("driver:$u_id:location", json_encode($location_data));
-                if (!$ret) {
-                    Gateway::sendToClient($client_id, json_encode([
-                        'errorCode' => 7,
-                        'msg' => '写入redis失败'
-                    ]));
-                    //return;
-                }
-            }
-
-            if (key_exists('o_id', $v) && strlen($v['o_id'])
-                && key_exists('begin', $v) && $v['begin' == 1]
-            ) {
-                self::prefixDistance($v['o_id'], $old_lng, $old_lat, $v['lng'], $v['lat']);
-            }
-
-            $old_lng = $v['lng'];
-            $old_lat = $v['lng'];
 
         }
         return implode(',', $location_ids);
 
     }
 
-    private static function prefixDistance($o_id, $old_lng, $old_lat, $new_lng, $new_lat)
-    {
-        $order_id = 'o:' . $o_id;
-        //获取距离并增加新距离
-        $distance = self::$redis->zScore('order:distance', $order_id);
-        if ($distance === false) {
-            $res = self::$redis->zAdd('order:distance', 0, $order_id);
-            return $res;
-        }
-        if ($old_lng == 0 || $old_lat == 0 || $new_lng == 0 || $new_lat == 0) {
-            $dis = 0;
-        } else {
-            $dis = self::GetDistance($old_lng, $old_lat, $new_lng, $new_lat);
-        }
-        $res = self::$redis->zIncrBy('order:distance', $dis, $order_id);
-        return $res;
-    }
 
     public static function GetDistance($lat1, $lng1, $lat2, $lng2)
     {
