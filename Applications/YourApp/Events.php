@@ -105,17 +105,21 @@ class Events
                     'errorCode' => 0,
                     'type' => 'uploadlocation',
                     'msg' => 'success',
-                    'ids' => $location_ids
+                    'data' => $location_ids
                 ]));
 
-            } else if ($type == "receivePush") {
+            }
+
+            else if ($type == "receivePush") {
                 $p_id = $message['p_id'];
                 self::receivePush($p_id);
-            } else if ($type == "MINIPush") {
+            }
+            else if ($type == "MINIPush") {
                 $id = $message['id'];
                 $u_id = $message['u_id'];
                 self::MINIPush($id, $u_id);
-            } else if ($type == 'checkOnline') {
+            }
+            else if ($type == 'checkOnline') {
                 if (self::checkOnline($client_id)) {
                     Gateway::sendToClient($client_id, json_encode([
                         'errorCode' => 0,
@@ -131,7 +135,6 @@ class Events
                 }
 
             }
-
 
         } catch (Exception $e) {
             Gateway::sendToClient($client_id, json_encode([
