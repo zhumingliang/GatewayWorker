@@ -197,7 +197,7 @@ class Events
             // if (!$current_save && $k == 0) {
             if ($k == 0) {
                 self::saveDriverCurrentLocation($client_id, $v['lat'], $v['lng'], $u_id);
-                self::test($u_id, $current['lat'], $current['lng'], 'location');
+                self::test($u_id, $v['lat'], $v['lng'], 'location');
 
             }
             self::$db->insert('drive_location_t')->cols(
