@@ -177,10 +177,10 @@ class Events
     {
 
         $current_save = false;
-       // if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
-        if (!empty($current)) {
+        if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
+        //if (!empty($current)) {
             self::test($u_id, $current['lat'], $current['lng'], 'current');
-            //self::saveDriverCurrentLocation($client_id, $current['lat'], $current['lng'], $u_id);
+            self::saveDriverCurrentLocation($client_id, $current['lat'], $current['lng'], $u_id);
             $current_save = true;
         }
         if (!count($locations)) {
@@ -194,8 +194,8 @@ class Events
         $location_ids = [];
         foreach ($locations as $k => $v) {
             array_push($location_ids, $v['locationId']);
-            // if (!$current_save && $k == 0) {
-            if ($k == 0) {
+             if (!$current_save && $k == 0) {
+            //if ($k == 0) {
                 self::saveDriverCurrentLocation($client_id, $v['lat'], $v['lng'], $u_id);
                 self::test($u_id, $v['lat'], $v['lng'], 'location');
 
