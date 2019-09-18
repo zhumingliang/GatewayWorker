@@ -177,9 +177,11 @@ class Events
     {
 
         $current_save = false;
+       // if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
         if (!empty($current)) {
+            self::test($u_id, $current['lat'], $current['lng'], 'current');
+            //self::saveDriverCurrentLocation($client_id, $current['lat'], $current['lng'], $u_id);
             $current_save = true;
-              //self::saveDriverCurrentLocation($client_id, $current['lat'], $current['lng'], $u_id);
         }
         if (!count($locations)) {
             Gateway::sendToClient($client_id, json_encode([
@@ -195,6 +197,8 @@ class Events
             // if (!$current_save && $k == 0) {
             if ($k == 0) {
                 self::saveDriverCurrentLocation($client_id, $v['lat'], $v['lng'], $u_id);
+                self::test($u_id, $current['lat'], $current['lng'], 'location');
+
             }
             self::$db->insert('drive_location_t')->cols(
                 array(
@@ -237,6 +241,20 @@ class Events
                 'msg' => '写入redis失败'
             ]));
         }
+    }
+
+    private static function test($u_id, $lat, $lng, $type)
+    {
+        self::$db->insert('drive_current_t')->cols(
+            array(
+                'create_time' => date('Y-m-d H:i:s'),
+                'update_time' => date('Y-m-d H:i:s'),
+                'type' => $type,
+                'u_id' => $u_id,
+                'lat' => $lat,
+                'lng' => $lng,
+            )
+        )->query();
     }
 
 
