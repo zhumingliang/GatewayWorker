@@ -179,7 +179,7 @@ class Events
         $current_save = false;
         if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
         //if (!empty($current)) {
-            self::test($u_id, $current['lat'], $current['lng'], 'current');
+            //self::test($u_id, $current['lat'], $current['lng'], 'current');
             self::saveDriverCurrentLocation($client_id, $current['lat'], $current['lng'], $u_id);
             $current_save = true;
         }
@@ -197,7 +197,7 @@ class Events
              if (!$current_save && $k == 0) {
             //if ($k == 0) {
                 self::saveDriverCurrentLocation($client_id, $v['lat'], $v['lng'], $u_id);
-                self::test($u_id, $v['lat'], $v['lng'], 'location');
+               // self::test($u_id, $v['lat'], $v['lng'], 'location');
 
             }
             self::$db->insert('drive_location_t')->cols(
@@ -280,13 +280,13 @@ class Events
     {
         // 向所有人发送
         //GateWay::sendToAll("$client_id logout\r\n");
-        self::$db->insert('drive_socket_closed_t')->cols(
+       /* self::$db->insert('drive_socket_closed_t')->cols(
             array(
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s'),
                 'client_id' => $client_id,
                 'u_id' => self::checkOnline($client_id)
             )
-        )->query();
+        )->query();*/
     }
 }
