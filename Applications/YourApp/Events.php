@@ -167,9 +167,6 @@ class Events
 
     private static function MINIPush($id, $u_id)
     {
-        /*        self::$db->update('drive_mini_push_t')
-                    ->cols(array('state' => 3))
-                    ->where('id=' . $p_id)->query();*/
         self::$db->query("UPDATE `drive_mini_push_t` SET `state` = 3 WHERE o_id=" . $id . " AND u_id=" . $u_id);
     }
 
@@ -178,8 +175,6 @@ class Events
 
         $current_save = false;
         if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
-        //if (!empty($current)) {
-            //self::test($u_id, $current['lat'], $current['lng'], 'current');
             self::saveDriverCurrentLocation($client_id, $current['lat'], $current['lng'], $u_id);
             $current_save = true;
         }
@@ -194,11 +189,8 @@ class Events
         $location_ids = [];
         foreach ($locations as $k => $v) {
             array_push($location_ids, $v['locationId']);
-             if (!$current_save && $k == 0) {
-            //if ($k == 0) {
+            if (!$current_save && $k == 0) {
                 self::saveDriverCurrentLocation($client_id, $v['lat'], $v['lng'], $u_id);
-               // self::test($u_id, $v['lat'], $v['lng'], 'location');
-
             }
             self::$db->insert('drive_location_t')->cols(
                 array(
@@ -230,17 +222,35 @@ class Events
 
     private static function saveDriverCurrentLocation($client_id, $lat, $lng, $u_id)
     {
+        //获取司机信息
+        $driver = self::getDriverInfo($u_id);
+        $company_id = empty($driver['company_id']) ? 1 : $driver['company_id'];
+        $save_location_key = "driver:location:$company_id";
         //将地理位置存储到redis,并更新行动距离
-        //1.先删除旧的实时地理位置
-        self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
+        //1.先删除旧的实时地理位置(drier:company_id:location)
+        self::$redis->rawCommand('zrem', $save_location_key, $u_id);
         //2.新增新的实时地理位置
-        $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $lng, $lat, $u_id);
+        $ret = self::$redis->rawCommand('geoadd', $save_location_key, $lng, $lat, $u_id);
         if (!$ret) {
             Gateway::sendToClient($client_id, json_encode([
                 'errorCode' => 7,
                 'msg' => '写入redis失败'
             ]));
         }
+    }
+
+    private static function getDriverInfo($u_id)
+    {
+        $driver_id = 'driver:' . $u_id;
+        $driver = self::$redis->hMGet($driver_id, ['company_id', 'phone', 'username']);
+        if (empty($driver)) {
+            $driver = self::$db->select('id,username,number,company_id')
+                ->from('drive_driver_t')
+                ->where('id= :id')
+                ->bindValues(array('id' => $u_id))
+                ->row();
+        }
+        return $driver;
     }
 
     private static function test($u_id, $lat, $lng, $type)
@@ -280,13 +290,13 @@ class Events
     {
         // 向所有人发送
         //GateWay::sendToAll("$client_id logout\r\n");
-       /* self::$db->insert('drive_socket_closed_t')->cols(
-            array(
-                'create_time' => date('Y-m-d H:i:s'),
-                'update_time' => date('Y-m-d H:i:s'),
-                'client_id' => $client_id,
-                'u_id' => self::checkOnline($client_id)
-            )
-        )->query();*/
+        /* self::$db->insert('drive_socket_closed_t')->cols(
+             array(
+                 'create_time' => date('Y-m-d H:i:s'),
+                 'update_time' => date('Y-m-d H:i:s'),
+                 'client_id' => $client_id,
+                 'u_id' => self::checkOnline($client_id)
+             )
+         )->query();*/
     }
 }
