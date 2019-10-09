@@ -180,10 +180,10 @@ class Events
         $current_save = false;
         if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
             if ($version == 1) {
-                self::saveDriverCurrentLocationV1($version, $client_id, $current['lat'], $current['lng'], $u_id);
+                self::saveDriverCurrentLocationV1($client_id, $current['lat'], $current['lng'], $u_id);
 
             } else {
-                self::saveDriverCurrentLocationV2($version, $client_id, $current['lat'], $current['lng'], $u_id);
+                self::saveDriverCurrentLocationV2($client_id, $current['lat'], $current['lng'], $u_id);
             }
             $current_save = true;
         }
