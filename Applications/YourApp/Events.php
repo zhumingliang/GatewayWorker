@@ -104,7 +104,11 @@ class Events
                 }
                 $arr = explode('-', $u_id);
                 $u_id = $arr[1];
-                $location_ids = self::prefixLocation($client_id, $u_id, $locations, $current);
+                $version = 1;
+                if (!empty($message['version'])) {
+                    $version = $message['version'];
+                }
+                $location_ids = self::prefixLocation($version, $client_id, $u_id, $locations, $current);
                 Gateway::sendToClient($client_id, json_encode([
                     'errorCode' => 0,
                     'type' => 'uploadlocation',
@@ -170,12 +174,17 @@ class Events
         self::$db->query("UPDATE `drive_mini_push_t` SET `state` = 3 WHERE o_id=" . $id . " AND u_id=" . $u_id);
     }
 
-    private static function prefixLocation($client_id, $u_id, $locations, $current)
+    private static function prefixLocation($version, $client_id, $u_id, $locations, $current)
     {
 
         $current_save = false;
         if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
-            self::saveDriverCurrentLocation($client_id, $current['lat'], $current['lng'], $u_id);
+            if ($version == 1) {
+                self::saveDriverCurrentLocationV1($version, $client_id, $current['lat'], $current['lng'], $u_id);
+
+            } else {
+                self::saveDriverCurrentLocationV2($version, $client_id, $current['lat'], $current['lng'], $u_id);
+            }
             $current_save = true;
         }
         if (!count($locations)) {
@@ -190,7 +199,12 @@ class Events
         foreach ($locations as $k => $v) {
             array_push($location_ids, $v['locationId']);
             if (!$current_save && $k == 0) {
-                self::saveDriverCurrentLocation($client_id, $v['lat'], $v['lng'], $u_id);
+                if ($version == 1) {
+                    self::saveDriverCurrentLocationV1($client_id, $v['lat'], $v['lng'], $u_id);
+
+                } else {
+                    self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
+                }
             }
             self::$db->insert('drive_location_t')->cols(
                 array(
@@ -220,14 +234,29 @@ class Events
 
     }
 
-    private static function saveDriverCurrentLocation($client_id, $lat, $lng, $u_id)
+    private static function saveDriverCurrentLocationV1($client_id, $lat, $lng, $u_id)
+    {
+        //将地理位置存储到redis,并更新行动距离
+        //1.先删除旧的实时地理位置
+        self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
+        //2.新增新的实时地理位置
+        $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $lng, $lat, $u_id);
+        if (!$ret) {
+            Gateway::sendToClient($client_id, json_encode([
+                'errorCode' => 7,
+                'msg' => '写入redis失败'
+            ]));
+        }
+    }
+
+    private static function saveDriverCurrentLocationV2($client_id, $lat, $lng, $u_id)
     {
         //获取司机信息
         $driver = self::getDriverInfo($u_id);
         $company_id = empty($driver['company_id']) ? 1 : $driver['company_id'];
         $save_location_key = "driver:location:$company_id";
         //将地理位置存储到redis,并更新行动距离
-        //1.先删除旧的实时地理位置(drier:company_id:location)
+        //1.先删除旧的实时地理位置(driver:company_id:location)
         self::$redis->rawCommand('zrem', $save_location_key, $u_id);
         //2.新增新的实时地理位置
         $ret = self::$redis->rawCommand('geoadd', $save_location_key, $lng, $lat, $u_id);
