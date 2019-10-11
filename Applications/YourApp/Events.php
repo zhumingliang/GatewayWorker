@@ -104,7 +104,7 @@ class Events
                 }
                 $arr = explode('-', $u_id);
                 $u_id = $arr[1];
-                $version = 2;
+                $version = 1;
                 if (!empty($message['version'])) {
                     $version = $message['version'];
                 }
@@ -180,7 +180,7 @@ class Events
         $current_save = false;
         if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
             if ($version == 1) {
-                self::saveDriverCurrentLocationV1($client_id, $current['lat'], $current['lng'], $u_id);
+                self::saveDriverCurrentLocationV2($client_id, $current['lat'], $current['lng'], $u_id);
             } else {
                 self::saveDriverCurrentLocationV2($client_id, $current['lat'], $current['lng'], $u_id);
             }
@@ -199,7 +199,7 @@ class Events
             array_push($location_ids, $v['locationId']);
             if (!$current_save && $k == 0) {
                 if ($version == 1) {
-                    self::saveDriverCurrentLocationV1($client_id, $v['lat'], $v['lng'], $u_id);
+                    self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
 
                 } else {
                     self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
