@@ -104,7 +104,7 @@ class Events
                 }
                 $arr = explode('-', $u_id);
                 $u_id = $arr[1];
-                $version = 1;
+                $version = 2;
                 if (!empty($message['version'])) {
                     $version = $message['version'];
                 }
@@ -181,7 +181,6 @@ class Events
         if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
             if ($version == 1) {
                 self::saveDriverCurrentLocationV1($client_id, $current['lat'], $current['lng'], $u_id);
-
             } else {
                 self::saveDriverCurrentLocationV2($client_id, $current['lat'], $current['lng'], $u_id);
             }
