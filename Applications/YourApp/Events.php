@@ -21,6 +21,7 @@
 //declare(ticks=1);
 
 use \GatewayWorker\Lib\Gateway;
+use think\Db;
 
 /**
  * 主逻辑
@@ -137,6 +138,9 @@ class Events
                         'msg' => 'fail'
                     ]));
                 }
+
+            } else if ($type == 'canteenConsumption') {
+                self::canteenConsumption($client_id);
 
             }
 
@@ -281,34 +285,14 @@ class Events
         return $driver;
     }
 
-    private static function test($u_id, $lat, $lng, $type)
+
+    private static function canteenConsumption($client_id)
     {
-        self::$db->insert('drive_current_t')->cols(
-            array(
-                'create_time' => date('Y-m-d H:i:s'),
-                'update_time' => date('Y-m-d H:i:s'),
-                'type' => $type,
-                'u_id' => $u_id,
-                'lat' => $lat,
-                'lng' => $lng,
-            )
-        )->query();
+        self::$db->query('call canteenConsumption(28,420,60,"BsaeoP2nmUyJ",
+                @currentOrderID,@currentConsumptionType,@resCode,@resMessage,@returnBalance,@returnDinner,@returnDepartment,@returnUsername');
+        $resultSet = self::$db->query('select @currentOrderID,@currentConsumptionType,@resCode,@resMessage,@returnBalance,@returnDinner,@returnDepartment,@returnUsername');
+        Gateway::sendToClient($client_id, json_encode($resultSet));
     }
-
-
-    public static function GetDistance($lat1, $lng1, $lat2, $lng2)
-    {
-        $radLat1 = $lat1 * pi() / 180.0;
-        $radLat2 = $lat2 * pi() / 180.0;
-        $a = $radLat1 - $radLat2;
-        $b = $lng1 * pi() / 180.0 - $lng2 * pi() / 180.0;
-        $s = 2 * asin(sqrt(pow(sin($a / 2), 2) +
-                cos($radLat1) * cos($radLat2) * pow(sin($b / 2), 2)));
-        $s = $s * 6378.137;
-        $s = round($s * 10000) / 10000;
-        return $s;
-    }
-
 
     /**
      * 当用户断开连接时触发
