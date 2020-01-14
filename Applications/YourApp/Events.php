@@ -36,6 +36,7 @@ class Events
      * 新建一个类的静态成员，用来保存数据库实例
      */
     public static $db = null;
+    public static $db2 = null;
     public static $redis = null;
 
     /**
@@ -45,6 +46,10 @@ class Events
     {
         self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
             '16273', 'cdb_outerroot', 'Libo1234', 'drive');
+
+        self::$db2 = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
+            '16273', 'cdb_outerroot', 'Libo1234', 'canteen');
+
 
 
         self::$redis = new Redis();
@@ -288,7 +293,7 @@ class Events
 
     private static function canteenConsumption($client_id)
     {
-        self::$db->query("call canteenConsumption(28,420,60,'BsaeoP2nmUyJ', @currentOrderID,@currentConsumptionType,@resCode,@resMessage,@returnBalance,@returnDinner,@returnDepartment,@returnUsername)");
+        self::$db2->query("call canteenConsumption(28,420,60,'BsaeoP2nmUyJ', @currentOrderID,@currentConsumptionType,@resCode,@resMessage,@returnBalance,@returnDinner,@returnDepartment,@returnUsername)");
         $resultSet = self::$db->query("select @currentOrderID,@currentConsumptionType,@resCode,@resMessage,@returnBalance,@returnDinner,@returnDepartment,@returnUsername");
         Gateway::sendToClient($client_id, json_encode($resultSet));
     }
