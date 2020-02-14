@@ -62,13 +62,7 @@ class Events
 
         \Workerman\Lib\Timer::add(3, function() use ($worker){
             if($worker->id === 0){
-                self::$db->insert('drive_log_t')->cols(
-                    array(
-                        'msg' => 'test',
-                        'create_time' => date('Y-m-d H:i:s'),
-                        'update_time' => date('Y-m-d H:i:s'),
-                    )
-                )->query();
+               self::orderHandel();
             }
 
         });
