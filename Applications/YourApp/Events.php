@@ -60,12 +60,12 @@ class Events
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
 
-        \Workerman\Lib\Timer::add(3, function() use ($worker){
+      /*  \Workerman\Lib\Timer::add(3, function() use ($worker){
             if($worker->id === 0){
                self::orderHandel();
             }
 
-        });
+        });*/
     }
 
 
