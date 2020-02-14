@@ -39,6 +39,16 @@ class Events
     public static $db2 = null;
     public static $redis = null;
 
+    public function orderHandel()
+    {
+        self::$db->insert('drive_log_t')->cols(
+            array(
+                'msg' => 'test',
+                'create_time' => date('Y-m-d H:i:s'),
+                'update_time' => date('Y-m-d H:i:s'),
+            )
+        )->query();
+    }
     /**
      * 进程启动后初始化数据库连接
      */
@@ -50,21 +60,11 @@ class Events
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
 
-        \Workerman\Lib\Timer::add(3, 'orderHandel', array(), true);
+        \Workerman\Lib\Timer::add(3, 'orderHandel');
 
     }
 
-    public function orderHandel()
-    {
-        self::$db->insert('drive_log_t')->cols(
-            array(
-                'msg' => 'test',
-                'create_time' => date('Y-m-d H:i:s'),
-                'update_time' => date('Y-m-d H:i:s'),
-            )
-        )->query();
 
-    }
 
     /**
      * 当客户端连接时触发
