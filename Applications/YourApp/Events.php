@@ -47,17 +47,24 @@ class Events
         self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
             '16273', 'cdb_outerroot', 'Libo1234', 'drive');
 
-        self::$db2 = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
-            '16273', 'cdb_outerroot', 'Libo1234', 'canteen');
-
-
-
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
 
+        \Workerman\Lib\Timer::add(3, 'orderHandel', array(), true);
 
     }
 
+    public function orderHandel()
+    {
+        self::$db->insert('drive_log_t')->cols(
+            array(
+                'content' => 'test',
+                'create_time' => date('Y-m-d H:i:s'),
+                'update_time' => date('Y-m-d H:i:s'),
+            )
+        )->query();
+
+    }
 
     /**
      * 当客户端连接时触发
