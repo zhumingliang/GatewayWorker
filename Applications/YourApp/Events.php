@@ -58,7 +58,7 @@ class Events
     {
         self::$db->insert('drive_log_t')->cols(
             array(
-                'content' => 'test',
+                'msg' => 'test',
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s'),
             )
