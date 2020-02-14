@@ -39,7 +39,7 @@ class Events
     public static $db2 = null;
     public static $redis = null;
 
-    public function orderHandel()
+    public static function orderHandel()
     {
         self::$db->insert('drive_log_t')->cols(
             array(
