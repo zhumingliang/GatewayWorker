@@ -5,6 +5,7 @@
     "license" : "MIT",
     "require": {
         "workerman/gateway-worker" : ">=3.0.0",
-        "workerman/mysql": "^1.0"
+        "workerman/mysql": "^1.0",
+        "workerman/http-client": "^0.1.4"
     }
 }

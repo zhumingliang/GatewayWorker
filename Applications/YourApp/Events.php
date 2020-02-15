@@ -36,19 +36,224 @@ class Events
      * 新建一个类的静态成员，用来保存数据库实例
      */
     public static $db = null;
-    public static $db2 = null;
     public static $redis = null;
+    public static $http = null;
 
     public static function orderHandel()
     {
+        //order:no;order:ing;order:complete
+        //1.未处理集合随机取出一个元素
+        $order_id = self::$redis->sPop('order:no');
+        if (!$order_id) {
+            return true;
+        }
+        //2.将元素添加至正在处理集合
+        self::$redis->sAdd('order:ing', $order_id);
+
+        //3.获取订单
+        $order = self::$db->select('*')->from('drive_order_t')
+            ->where('id= :order_id')->bindValues(array('order_id' => $order_id))->row();
+        if (!$order || $order['state'] != 1
+        ) {
+            //订单不存在或者状态不是未接单
+            self::$redis->sRem('order:ing', $order_id);
+            self::$redis->sAdd('order:complete', $order_id);
+            return true;
+        }
+        //4.查询可派送司机
+        $res = self::findDriverToPush($order);
+        if (!$res) {
+            self::$redis->sRem('order:ing', $order_id);
+            self::$redis->sAdd('order:no', $order_id);
+        }
+    }
+
+    private static function sendMsg($params)
+    {
+        $rule = "https://tonglingok.com/api/v1/sms/driver";
+        self::$http->post($rule, $params, function ($response) {
+            self::saveLog("发送短信成功:" . $response->getBody());
+        }, function ($exception) {
+            self::saveLog("发送短信失败：" . $exception);
+
+        });
+    }
+
+    private static function saveLog($msg)
+    {
         self::$db->insert('drive_log_t')->cols(
             array(
-                'msg' => 'test',
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s'),
+                'msg' => $msg
             )
         )->query();
     }
+
+    private static function findDriverToPush($order)
+    {
+
+        $company_id = $order['company_id'];
+        //查询所有司机并按距离排序
+        $lat = $order['start_lat'];
+        $lng = $order['start_lng'];
+        $driver_location_key = "driver:location:$company_id";
+        $list = self::$redis->rawCommand('georadius',
+            $driver_location_key, $lng, $lat,
+            20,
+            'km', 'ASC');
+        if (!count($list)) {
+            return false;
+        }
+        $push = true;
+        //设置三个set: 司机未接单 driver_order_no；司机正在派单 driver_order_ing；司机已经接单 driver_order_receive
+        foreach ($list as $k => $v) {
+            $d_id = $v;
+            $checkDriver = self::checkDriverCanReceiveOrder($d_id);
+            if ($checkDriver) {
+                $check = self::checkDriverPush($order->id, $d_id);
+                if ($check == 2) {
+                    continue;
+                }
+
+                //将司机从'未接单'移除，添加到：正在派单
+                self::$redis->sRem('driver_order_no:' . $company_id, $d_id);
+                self::$redis->sRem('driver_order_receive:' . $company_id, $d_id);
+                self::$redis->sAdd('driver_order_ing:' . $company_id, $d_id);
+
+                //通过短信推送给司机
+                $phone = self::$redis->hGet('driver:' . $d_id, 'phone');
+
+                $send_data = [
+                    'phone' => $phone, 'order_num' => $order['order_num'],
+                    'create_time' => $order['create_time']
+                ];
+               // self::sendMsg($send_data);
+                if ($order['from'] == "小程序下单" && $order['company_id'] == 1) {
+                    $send_data = [
+                        'phone' => '13515623335', 'order_num' => $order['order_num'],
+                        'create_time' => $order['create_time']
+                    ];
+                   // self::sendMsg($send_data);
+                }
+                $push_id = self::$db->insert('drive_order_push_t')->cols(
+                    [
+                        'd_id' => $d_id,
+                        'o_id' => $order['id'],
+                        'type' => 'normal',
+                        'state' => 1,
+                        'create_time' => date('Y-m-d H:i:s'),
+                        'update_time' => date('Y-m-d H:i:s'),
+                        'limit_time' => time()
+                    ]
+                )->query();
+                $driver_location = self::getDriverLocation($d_id, $company_id);
+                //通过websocket推送给司机
+                $push_data = [
+                    'type' => 'order',
+                    'order_info' => [
+                        'o_id' => $order->id,
+                        'from' => "系统派单",
+                        'name' => $order->name,
+                        'phone' => $order->phone,
+                        'start' => $order->start,
+                        'end' => $order->end,
+                        'distance' => CalculateUtil::GetDistance($lat, $lng, $driver_location['lat'], $driver_location['lng']),
+                        'create_time' => $order->create_time,
+                        'p_id' => $push_id
+
+                    ]
+                ];
+                Gateway::sendToUid('driver' . '-' . $d_id, self::prefixMessage($push_data));
+                self::$db->update('drive_order_push_t')->cols(array('message' => json_encode($push_data)))->where('id=' . $push_id)->query();
+                $push =1;
+                break;
+            }
+
+        }
+        return $push;
+    }
+
+    private static function prefixMessage($message)
+    {
+        $data = [
+            'errorCode' => 0,
+            'msg' => 'success',
+            'type' => $message['type'],
+            'data' => $message['order_info']
+
+        ];
+        return json_encode($data);
+
+    }
+
+    public static function getDriverLocation($u_id, $company_id = '')
+    {
+
+        $company_id = empty($company_id) ? 1 : $company_id;
+        $driver_location_key = "driver:location:$company_id";
+        $location = self::$redis->rawCommand('geopos', $driver_location_key, $u_id);
+        if ($location) {
+            $lng = empty($location[0][0]) ? null : $location[0][0];
+            $lat = empty($location[0][1]) ? null : $location[0][1];
+        } else {
+            $lng = null;
+            $lat = null;
+        }
+
+        return [
+            'lng' => $lng,
+            'lat' => $lat,
+        ];
+    }
+
+
+    public static function checkDriverCanReceiveOrder($d_id)
+    {
+        if (!Gateway::isUidOnline('driver' . '-' . $d_id)) {
+            return false;
+        }
+        $company_id = self::$redis->hGet('driver:' . $d_id, 'company_id');
+        $company_id = empty($company_id) ? 1 : $company_id;
+
+        if (!(self::$redis->sIsMember('driver_order_no:' . $company_id, $d_id))) {
+            return false;
+        }
+
+        $driver = self::$db->select('online')
+            ->from('drive_driver_t')
+            ->where('id= :driver_id')
+            ->bindValues(array('driver_id' => $d_id))->row();
+
+        if ($driver['online'] == 2) {
+            return false;
+        }
+        return true;
+    }
+
+    private static function checkDriverPush($o_id, $d_id)
+    {
+        $pushes = self::$db->select('*')
+            ->from('drive_order_push_t')
+            ->where('o_id= :order_id AND d_id= :driver_id AND receive= :receive_state')
+            ->bindValues(array('order_id' => $o_id, 'driver_id' => $d_id, 'receive_state' => 1))
+            ->query();
+
+        if (!count($pushes)) {
+            return 1;
+        }
+        foreach ($pushes as $k => $v) {
+            if ($v['state'] == 3) {
+                return 2;
+            }
+        }
+        if (count($pushes) >= 3) {
+            return 2;
+        }
+        return 1;
+    }
+
+
     /**
      * 进程启动后初始化数据库连接
      */
@@ -60,14 +265,12 @@ class Events
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
 
-      /*  \Workerman\Lib\Timer::add(3, function() use ($worker){
-            if($worker->id === 0){
-               self::orderHandel();
+        \Workerman\Lib\Timer::add(3, function () use ($worker) {
+            if ($worker->id === 0) {
+                self::orderHandel();
             }
-
-        });*/
+        });
     }
-
 
 
     /**
@@ -253,21 +456,6 @@ class Events
 
     }
 
-    private static function saveDriverCurrentLocationV1($client_id, $lat, $lng, $u_id)
-    {
-        //将地理位置存储到redis,并更新行动距离
-        //1.先删除旧的实时地理位置
-        self::$redis->rawCommand('zrem', 'drivers_tongling', $u_id);
-        //2.新增新的实时地理位置
-        $ret = self::$redis->rawCommand('geoadd', 'drivers_tongling', $lng, $lat, $u_id);
-        if (!$ret) {
-            Gateway::sendToClient($client_id, json_encode([
-                'errorCode' => 7,
-                'msg' => '写入redis失败'
-            ]));
-        }
-    }
-
     private static function saveDriverCurrentLocationV2($client_id, $lat, $lng, $u_id)
     {
         //获取司机信息
@@ -301,13 +489,6 @@ class Events
         return $driver;
     }
 
-
-    private static function canteenConsumption($client_id)
-    {
-        self::$db2->query("call canteenConsumption(28,420,60,'BsaeoP2nmUyJ', @currentOrderID,@currentConsumptionType,@resCode,@resMessage,@returnBalance,@returnDinner,@returnDepartment,@returnUsername)");
-        $resultSet = self::$db2->query("select @currentOrderID,@currentConsumptionType,@resCode,@resMessage,@returnBalance,@returnDinner,@returnDepartment,@returnUsername");
-        Gateway::sendToClient($client_id, json_encode($resultSet));
-    }
 
     /**
      * 当用户断开连接时触发
