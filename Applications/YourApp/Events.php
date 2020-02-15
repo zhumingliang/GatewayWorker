@@ -44,7 +44,7 @@ class Events
         //order:no;order:ing;order:complete
         //1.未处理集合随机取出一个元素
         $order_id = self::$redis->sPop('order:no');
-        self::saveLog('order_id:'.$order_id);
+        self::saveLog('order_id:' . $order_id);
         if (!$order_id) {
             return true;
         }
@@ -266,7 +266,8 @@ class Events
 
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
-        self::$http = new \http\Client();
+        self::$http = new Workerman\Http\Client();
+
         \Workerman\Lib\Timer::add(3, function () use ($worker) {
             if ($worker->id === 0) {
                 self::orderHandel();
