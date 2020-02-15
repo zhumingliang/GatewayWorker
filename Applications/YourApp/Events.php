@@ -104,7 +104,7 @@ class Events
         if (!count($list)) {
             return false;
         }
-        $push = true;
+        $push = false;
         //设置三个set: 司机未接单 driver_order_no；司机正在派单 driver_order_ing；司机已经接单 driver_order_receive
         foreach ($list as $k => $v) {
             $d_id = $v;
@@ -119,6 +119,7 @@ class Events
                 self::$redis->sRem('driver_order_no:' . $company_id, $d_id);
                 self::$redis->sRem('driver_order_receive:' . $company_id, $d_id);
                 self::$redis->sAdd('driver_order_ing:' . $company_id, $d_id);
+                self::saveLog("driver_id:" . $d_id);
 
                 //通过短信推送给司机
                 $phone = self::$redis->hGet('driver:' . $d_id, 'phone');
@@ -165,7 +166,7 @@ class Events
                 ];
                 Gateway::sendToUid('driver' . '-' . $d_id, self::prefixMessage($push_data));
                 self::$db->update('drive_order_push_t')->cols(array('message' => json_encode($push_data)))->where('id=' . $push_id)->query();
-                $push = 1;
+                $push = true;
                 break;
             }
 
