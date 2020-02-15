@@ -207,7 +207,6 @@ class Events
         ];
     }
 
-
     public static function checkDriverCanReceiveOrder($d_id)
     {
         if (!Gateway::isUidOnline('driver' . '-' . $d_id)) {
@@ -219,7 +218,11 @@ class Events
         if (!(self::$redis->sIsMember('driver_order_no:' . $company_id, $d_id))) {
             return false;
         }
+        return self::checkDriverOnline($d_id);
+    }
 
+    private static function checkDriverOnline($d_id)
+    {
         $driver = self::$db->select('online')
             ->from('drive_driver_t')
             ->where('id= :driver_id')
@@ -253,11 +256,79 @@ class Events
         return 1;
     }
 
+    public static function handelMiniNoAnswer()
+    {
+        $push = self::$db->query("SELECT * FROM `drive_mini_push_t` WHERE state <> 3 AND count < 1");
+
+        if (count($push)) {
+            foreach ($push as $k => $v) {
+                $online = false;
+                $u_id = $v['u_id'];
+                $message = json_decode($v['message'], true);
+                if ($v['send_to'] == 1) {
+                    if (Gateway::isUidOnline('mini' . '-' . $u_id)) {
+                        $online = true;
+                        Gateway::sendToUid('mini' . '-' . $u_id, self::prefixMessage($message));
+                    }
+                } else if ($v['send_to'] == 2) {
+                    if (Gateway::isUidOnline('driver' . '-' . $u_id)) {
+                        $online = true;
+                        Gateway::sendToUid('driver' . '-' . $u_id, self::prefixMessage($message));
+                    }
+                }
+
+                if ($online) {
+                    self::$db->update('drive_mini_push_t')->cols(array('count' => $v['count'] + 1))->where('id=' . $v['id'])->query();
+                }
+            }
+        }
+
+
+    }
+
+    public static function handelDriverNoAnswer()
+    {
+        $push = self::$db->select('*')
+            ->from('drive_order_push_t')
+            ->where('state= :order_state')
+            ->bindValues(array('order_state' => 1))
+            ->query();
+
+        if (count($push)) {
+            foreach ($push as $k => $v) {
+                $d_id = $v['d_id'];
+                $order_id = $v['o_id'];
+                $company_id = self::$redis->hGet('driver:' . $d_id, 'company_id');
+                if (time() > $v['limit_time'] + 45) {
+                    self::$redis->sRem('driver_order_receive:' . $company_id, $d_id);
+                    self::$redis->sRem('driver_order_ing:' . $company_id, $d_id);
+                    self::$redis->sAdd('driver_order_no:' . $company_id, $d_id);
+
+                    //将订单由正在处理集合改为未处理集合
+                    self::$redis->sRem('order:ing', $order_id);
+                    self::$redis->sAdd('order:no', $order_id);
+
+                    self::$db->update('drive_order_push_t')->cols(array('state' => 4))->where('id=' . $v['id'])->query();
+                } else {
+
+                    if ($v['receive'] == 2 && !empty($v['message'])
+                        && Gateway::isUidOnline('driver' . '-' . $d_id)
+                        && (self::checkDriverOnline($d_id))) {
+                        Gateway::sendToUid('driver' . '-' . $d_id, self::prefixMessage(json_decode($v['message'], true)));
+                    }
+                }
+            }
+
+
+        }
+    }
+
 
     /**
      * 进程启动后初始化数据库连接
      */
-    public static function onWorkerStart($worker)
+    public
+    static function onWorkerStart($worker)
     {
         self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
             '16273', 'cdb_outerroot', 'Libo1234', 'drive');
@@ -266,10 +337,10 @@ class Events
         self::$redis->connect('127.0.0.1', 6379, 60);
         self::$http = new Workerman\Http\Client();
 
-        \Workerman\Lib\Timer::add(3, function () use ($worker) {
-            if ($worker->id === 0) {
-                self::orderHandel();
-            }
+        \Workerman\Lib\Timer::add(1, function () use ($worker) {
+            self::handelDriverNoAnswer();
+            self::handelMiniNoAnswer();
+            self::orderHandel();
         });
     }
 
@@ -280,7 +351,8 @@ class Events
      *
      * @param int $client_id 连接id
      */
-    public static function onConnect($client_id)
+    public
+    static function onConnect($client_id)
     {
 
         $data = [
@@ -300,7 +372,8 @@ class Events
      * @param int $client_id 连接id
      * @param mixed $message 具体消息
      */
-    public static function onMessage($client_id, $message)
+    public
+    static function onMessage($client_id, $message)
     {
 
         try {
@@ -375,7 +448,8 @@ class Events
 
     }
 
-    private static function checkOnline($client_id)
+    private
+    static function checkOnline($client_id)
     {
         $u_id = Gateway::getUidByClientId($client_id);
         if (!$u_id) {
@@ -387,18 +461,21 @@ class Events
 
     }
 
-    private static function receivePush($p_id)
+    private
+    static function receivePush($p_id)
     {
         self::$db->update('drive_order_push_t')->cols(array('receive' => 1))->where('id=' . $p_id)->query();
 
     }
 
-    private static function MINIPush($id, $u_id)
+    private
+    static function MINIPush($id, $u_id)
     {
         self::$db->query("UPDATE `drive_mini_push_t` SET `state` = 3 WHERE o_id=" . $id . " AND u_id=" . $u_id);
     }
 
-    private static function prefixLocation($version, $client_id, $u_id, $locations, $current)
+    private
+    static function prefixLocation($version, $client_id, $u_id, $locations, $current)
     {
 
         $current_save = false;
@@ -457,7 +534,8 @@ class Events
 
     }
 
-    private static function saveDriverCurrentLocationV2($client_id, $lat, $lng, $u_id)
+    private
+    static function saveDriverCurrentLocationV2($client_id, $lat, $lng, $u_id)
     {
         //获取司机信息
         $driver = self::getDriverInfo($u_id);
@@ -476,7 +554,8 @@ class Events
         }
     }
 
-    private static function getDriverInfo($u_id)
+    private
+    static function getDriverInfo($u_id)
     {
         $driver_id = 'driver:' . $u_id;
         $driver = self::$redis->hMGet($driver_id, ['company_id', 'phone', 'username']);
@@ -495,7 +574,8 @@ class Events
      * 当用户断开连接时触发
      * @param int $client_id 连接id
      */
-    public static function onClose($client_id)
+    public
+    static function onClose($client_id)
     {
         // 向所有人发送
         //GateWay::sendToAll("$client_id logout\r\n");
