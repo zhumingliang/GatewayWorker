@@ -44,7 +44,6 @@ class Events
         //order:no;order:ing;order:complete
         //1.未处理集合随机取出一个元素
         $order_id = self::$redis->sPop('order:no');
-        self::saveLog('order_id:' . $order_id);
         if (!$order_id) {
             return true;
         }
@@ -58,8 +57,6 @@ class Events
             //订单不存在或者状态不是未接单
             self::$redis->sRem('order:ing', $order_id);
             self::$redis->sAdd('order:complete', $order_id);
-            self::saveLog(1);
-
             return true;
         }
         //4.查询可派送司机
