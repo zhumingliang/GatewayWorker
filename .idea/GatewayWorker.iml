@@ -3,8 +3,11 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/vendor/composer" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/psr/http-message" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/workerman/gateway-worker" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/workerman/http-client" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/workerman/mysql" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/workerman/psr7" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/workerman/workerman" />
     </content>
     <orderEntry type="inheritedJdk" />

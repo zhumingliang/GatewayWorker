@@ -6,11 +6,21 @@ namespace Composer\Autoload;
 
 class ComposerStaticInite47f46ff15e6316733f712f11c607b70
 {
+    public static $files = array (
+        'f88f8987adfe3f7cf9978fa9a9d148bc' => __DIR__ . '/..' . '/workerman/psr7/src/functions_include.php',
+    );
+
     public static $prefixLengthsPsr4 = array (
         'W' => 
         array (
+            'Workerman\\Psr7\\' => 15,
             'Workerman\\MySQL\\' => 16,
+            'Workerman\\Http\\' => 15,
             'Workerman\\' => 10,
+        ),
+        'P' => 
+        array (
+            'Psr\\Http\\Message\\' => 17,
         ),
         'G' => 
         array (
@@ -19,13 +29,25 @@ class ComposerStaticInite47f46ff15e6316733f712f11c607b70
     );
 
     public static $prefixDirsPsr4 = array (
+        'Workerman\\Psr7\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/psr7/src',
+        ),
         'Workerman\\MySQL\\' => 
         array (
             0 => __DIR__ . '/..' . '/workerman/mysql/src',
         ),
+        'Workerman\\Http\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/http-client/src',
+        ),
         'Workerman\\' => 
         array (
             0 => __DIR__ . '/..' . '/workerman/workerman',
+        ),
+        'Psr\\Http\\Message\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
         'GatewayWorker\\' => 
         array (

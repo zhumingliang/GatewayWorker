@@ -128,13 +128,13 @@ class Events
                     'phone' => $phone, 'order_num' => $order['order_num'],
                     'create_time' => $order['create_time']
                 ];
-               // self::sendMsg($send_data);
+                self::sendMsg($send_data);
                 if ($order['from'] == "小程序下单" && $order['company_id'] == 1) {
                     $send_data = [
                         'phone' => '13515623335', 'order_num' => $order['order_num'],
                         'create_time' => $order['create_time']
                     ];
-                   // self::sendMsg($send_data);
+                    self::sendMsg($send_data);
                 }
                 $push_id = self::$db->insert('drive_order_push_t')->cols(
                     [
@@ -152,21 +152,21 @@ class Events
                 $push_data = [
                     'type' => 'order',
                     'order_info' => [
-                        'o_id' => $order->id,
+                        'o_id' => $order['id'],
                         'from' => "系统派单",
-                        'name' => $order->name,
-                        'phone' => $order->phone,
-                        'start' => $order->start,
-                        'end' => $order->end,
+                        'name' => $order['name'],
+                        'phone' => $order['phone'],
+                        'start' => $order['start'],
+                        'end' => $order['end'],
                         'distance' => CalculateUtil::GetDistance($lat, $lng, $driver_location['lat'], $driver_location['lng']),
-                        'create_time' => $order->create_time,
+                        'create_time' => $order['create_time'],
                         'p_id' => $push_id
 
                     ]
                 ];
                 Gateway::sendToUid('driver' . '-' . $d_id, self::prefixMessage($push_data));
                 self::$db->update('drive_order_push_t')->cols(array('message' => json_encode($push_data)))->where('id=' . $push_id)->query();
-                $push =1;
+                $push = 1;
                 break;
             }
 
@@ -264,7 +264,7 @@ class Events
 
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
-
+        self::$http = new \http\Client();
         \Workerman\Lib\Timer::add(3, function () use ($worker) {
             if ($worker->id === 0) {
                 self::orderHandel();
