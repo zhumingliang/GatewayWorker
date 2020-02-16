@@ -243,10 +243,10 @@ class Events
             ->bindValues(array('order_id' => $o_id, 'driver_id' => $d_id, 'receive_state' => 1))
             ->query();
 
-        self::saveLog("dp" . json_encode($pushes));
         if (!count($pushes)) {
             return 1;
         }
+        self::saveLog("dp" . json_encode($pushes));
         foreach ($pushes as $k => $v) {
             if ($v['state'] == 3) {
                 return 2;
@@ -296,7 +296,6 @@ class Events
             ->where('state= :order_state')
             ->bindValues(array('order_state' => 1))
             ->query();
-        self::saveLog(json_encode($push));
 
         if (count($push)) {
             foreach ($push as $k => $v) {
