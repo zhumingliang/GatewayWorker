@@ -119,7 +119,6 @@ class Events
                 self::$redis->sRem('driver_order_no:' . $company_id, $d_id);
                 self::$redis->sRem('driver_order_receive:' . $company_id, $d_id);
                 self::$redis->sAdd('driver_order_ing:' . $company_id, $d_id);
-                self::saveLog("driver_id:" . $d_id);
 
                 //通过短信推送给司机
                 $phone = self::$redis->hGet('driver:' . $d_id, 'phone');
@@ -165,7 +164,9 @@ class Events
                     ]
                 ];
                 Gateway::sendToUid('driver' . '-' . $d_id, self::prefixMessage($push_data));
-                self::$db->update('drive_order_push_t')->cols(array('message' => json_encode($push_data)))->where('id=' . $push_id)->query();
+                self::$db->update('drive_order_push_t')
+                    ->cols(array('message' => json_encode($push_data)))
+                    ->where('id=' . $push_id)->query();
                 $push = true;
                 break;
             }
@@ -228,10 +229,10 @@ class Events
             ->where('id= :driver_id')
             ->bindValues(array('driver_id' => $d_id))->row();
 
-        if ($driver['online'] == 2) {
-            return false;
+        if ($driver['online'] == 1) {
+            return true;
         }
-        return true;
+        return false;
     }
 
     private static function checkDriverPush($o_id, $d_id)
@@ -242,12 +243,14 @@ class Events
             ->bindValues(array('order_id' => $o_id, 'driver_id' => $d_id, 'receive_state' => 1))
             ->query();
 
+        self::saveLog("dp" . json_encode($pushes));
         if (!count($pushes)) {
             return 1;
         }
         foreach ($pushes as $k => $v) {
             if ($v['state'] == 3) {
                 return 2;
+                break;
             }
         }
         if (count($pushes) >= 3) {
@@ -258,7 +261,7 @@ class Events
 
     public static function handelMiniNoAnswer()
     {
-        $push = self::$db->query("SELECT * FROM `drive_mini_push_t` WHERE state <> 3 AND count < 1");
+        $push = self::$db->query("SELECT * FROM `drive_mini_push_t` WHERE state <> 3 AND count < 10");
 
         if (count($push)) {
             foreach ($push as $k => $v) {
@@ -293,6 +296,7 @@ class Events
             ->where('state= :order_state')
             ->bindValues(array('order_state' => 1))
             ->query();
+        self::saveLog(json_encode($push));
 
         if (count($push)) {
             foreach ($push as $k => $v) {
