@@ -219,6 +219,13 @@ class Events
         if (!(self::$redis->sIsMember('driver_order_no:' . $company_id, $d_id))) {
             return false;
         }
+        //检测司机是否刚刚完成订单，间隔时间不能小于30秒
+        $order_time = self::$redis->hGet('driver:' . $d_id, 'order_time');
+        if ($order_time + 30 > time()) {
+            return false;
+        }
+
+
         return self::checkDriverOnline($d_id);
     }
 
@@ -246,7 +253,6 @@ class Events
         if (!count($pushes)) {
             return 1;
         }
-        self::saveLog("dp" . json_encode($pushes));
         foreach ($pushes as $k => $v) {
             if ($v['state'] == 3) {
                 return 2;
