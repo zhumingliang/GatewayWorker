@@ -221,6 +221,7 @@ class Events
         }
         //检测司机是否刚刚完成订单，间隔时间不能小于30秒
         $order_time = self::$redis->hGet('driver:' . $d_id, 'order_time');
+        $order_time = empty($order_time) ? 0 : $order_time;
         if ($order_time + 30 > time()) {
             return false;
         }
