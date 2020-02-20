@@ -226,7 +226,6 @@ class Events
             return false;
         }
 
-
         return self::checkDriverOnline($d_id);
     }
 
@@ -347,11 +346,13 @@ class Events
         self::$redis->connect('127.0.0.1', 6379, 60);
         self::$http = new Workerman\Http\Client();
 
-        \Workerman\Lib\Timer::add(1, function () use ($worker) {
-            self::handelDriverNoAnswer();
-            self::handelMiniNoAnswer();
-            self::orderHandel();
-        });
+        if ($worker->id === 0){
+            \Workerman\Lib\Timer::add(1, function () use ($worker) {
+                self::handelDriverNoAnswer();
+                self::handelMiniNoAnswer();
+                self::orderHandel();
+            });
+        }
     }
 
 
