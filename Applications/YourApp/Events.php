@@ -347,7 +347,7 @@ class Events
         self::$http = new Workerman\Http\Client();
 
         if ($worker->id === 0){
-            \Workerman\Lib\Timer::add(2, function () use ($worker) {
+            \Workerman\Lib\Timer::add(5, function () use ($worker) {
                 self::handelDriverNoAnswer();
                 self::handelMiniNoAnswer();
                 self::orderHandel();
