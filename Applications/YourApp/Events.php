@@ -443,6 +443,9 @@ class Events
                     ]));
                 }
 
+            } else if ($type == 'canteenConsumption') {
+                self::canteenConsumption($client_id);
+
             }
 
         } catch (Exception $e) {
@@ -514,30 +517,28 @@ class Events
                     self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
                 }
             }
-            if (!empty($v['o_id'])){
-                self::$db->insert('drive_location_t')->cols(
-                    array(
-                        'lat' => $v['lat'],
-                        'lng' => $v['lng'],
-                        'citycode' => $v['citycode'],
-                        'city' => $v['city'],
-                        'district' => $v['district'],
-                        'street' => $v['street'],
-                        'addr' => $v['addr'],
-                        'locationdescribe' => $v['locationdescribe'],
-                        'phone_code' => $v['phone_code'],
-                        'create_time' => $v['create_time'],
-                        'update_time' => $v['create_time'],
-                        'up_time' => date('Y-m-d H:i:s'),
-                        'baidu_time' => $v['createTime'],
-                        'location_id' => $v['locationId'],
-                        'loc_type' => $v['locType'],
-                        'o_id' =>  $v['o_id'],
-                        'begin' => key_exists('begin', $v) ? $v['begin'] : 2,
-                        'u_id' => $u_id
-                    )
-                )->query();
-            }
+            self::$db->insert('drive_location_t')->cols(
+                array(
+                    'lat' => $v['lat'],
+                    'lng' => $v['lng'],
+                    'citycode' => $v['citycode'],
+                    'city' => $v['city'],
+                    'district' => $v['district'],
+                    'street' => $v['street'],
+                    'addr' => $v['addr'],
+                    'locationdescribe' => $v['locationdescribe'],
+                    'phone_code' => $v['phone_code'],
+                    'create_time' => $v['create_time'],
+                    'update_time' => $v['create_time'],
+                    'up_time' => date('Y-m-d H:i:s'),
+                    'baidu_time' => $v['createTime'],
+                    'location_id' => $v['locationId'],
+                    'loc_type' => $v['locType'],
+                    'o_id' => key_exists('o_id', $v) ? $v['o_id'] : '',
+                    'begin' => key_exists('begin', $v) ? $v['begin'] : 2,
+                    'u_id' => $u_id
+                )
+            )->query();
 
         }
         return implode(',', $location_ids);
