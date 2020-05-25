@@ -346,13 +346,13 @@ class Events
         self::$redis->connect('127.0.0.1', 6379, 60);
         self::$http = new Workerman\Http\Client();
 
-       /* if ($worker->id === 0){
+        if ($worker->id === 0){
             \Workerman\Lib\Timer::add(5, function () use ($worker) {
                 self::handelDriverNoAnswer();
                 self::handelMiniNoAnswer();
                 self::orderHandel();
             });
-        }*/
+        }
     }
 
 
