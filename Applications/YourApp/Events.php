@@ -541,7 +541,6 @@ class Events
             )->query();
 
         }
-        self::saveLog(count($location_ids));
         return implode(',', $location_ids);
 
     }
