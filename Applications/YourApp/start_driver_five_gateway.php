@@ -21,7 +21,7 @@ use \Workerman\Autoloader;
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 // gateway 进程，这里使用Text协议，可以用telnet测试
-$gateway = new Gateway("Websocket://0.0.0.0:7276");
+$gateway = new Gateway("Websocket://0.0.0.0:7262");
 // gateway名称，status方便查看
 $gateway->name = 'Websocket_driver_five';
 // gateway进程数
