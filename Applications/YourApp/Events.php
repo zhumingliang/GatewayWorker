@@ -79,7 +79,7 @@ class Events
 
     private static function saveQueue($params)
     {
-        $rule = "https://tonglingok.com/api/v1/sevice/sendToDriver";
+        $rule = "https://tonglingok.com/api/v1/service/sendToDriver";
         self::$http->post($rule, $params, function ($response) {
             $res = $response->getBody();
             if ($res['errorCode'] === 0) {
