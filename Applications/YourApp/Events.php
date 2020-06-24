@@ -21,7 +21,6 @@
 //declare(ticks=1);
 
 use \GatewayWorker\Lib\Gateway;
-use think\Db;
 
 /**
  * 主逻辑
@@ -78,6 +77,22 @@ class Events
         });
     }
 
+    private static function saveQueue($params)
+    {
+        $rule = "https://tonglingok.com/api/v1/sevice/sendToDriver";
+        self::$http->post($rule, $params, function ($response) {
+            $res = $response->getBody();
+            if ($res['errorCode'] === 0) {
+                return true;
+            }
+            return false;
+        }, function ($exception) {
+            self::saveLog("发送推送失败：" . $exception);
+            return false;
+
+        });
+    }
+
     private static function saveLog($msg)
     {
         self::$db->insert('drive_log_t')->cols(
@@ -104,7 +119,6 @@ class Events
         if (!count($list)) {
             return false;
         }
-        $push = false;
         //设置三个set: 司机未接单 driver_order_no；司机正在派单 driver_order_ing；司机已经接单 driver_order_receive
         foreach ($list as $k => $v) {
             $d_id = $v;
@@ -128,51 +142,30 @@ class Events
                     'create_time' => $order['create_time']
                 ];
                 self::sendMsg($send_data);
-                if ($order['from'] == "小程序下单" && $order['company_id'] == 1) {
-                    $send_data = [
-                        'phone' => '13515623335', 'order_num' => $order['order_num'],
-                        'create_time' => $order['create_time']
-                    ];
-                    self::sendMsg($send_data);
-                }
-                $push_id = self::$db->insert('drive_order_push_t')->cols(
-                    [
-                        'd_id' => $d_id,
-                        'o_id' => $order['id'],
-                        'type' => 'normal',
-                        'state' => 1,
-                        'create_time' => date('Y-m-d H:i:s'),
-                        'update_time' => date('Y-m-d H:i:s'),
-                        'limit_time' => time()
-                    ]
-                )->query();
                 $driver_location = self::getDriverLocation($d_id, $company_id);
+                $distance = CalculateUtil::GetDistance($lat, $lng, $driver_location['lat'], $driver_location['lng']);
                 //通过websocket推送给司机
                 $push_data = [
                     'type' => 'order',
-                    'order_info' => [
-                        'o_id' => $order['id'],
-                        'from' => "系统派单",
-                        'name' => $order['name'],
-                        'phone' => $order['phone'],
-                        'start' => $order['start'],
-                        'end' => $order['end'],
-                        'distance' => CalculateUtil::GetDistance($lat, $lng, $driver_location['lat'], $driver_location['lng']),
-                        'create_time' => $order['create_time'],
-                        'p_id' => $push_id
-
-                    ]
+                    'o_id' => $order['id'],
+                    'd_id' => $d_id,
+                    'company_id' => $company_id,
+                    'from' => "系统派单",
+                    'name' => $order['name'],
+                    'phone' => $order['phone'],
+                    'start' => $order['start'],
+                    'end' => $order['end'],
+                    'distance' => $distance,
+                    'create_time' => $order['create_time'],
+                    'limit' => time(),
+                    'p_id' => self::savePushCode()
                 ];
-                Gateway::sendToUid('driver' . '-' . $d_id, self::prefixMessage($push_data));
-                self::$db->update('drive_order_push_t')
-                    ->cols(array('message' => json_encode($push_data)))
-                    ->where('id=' . $push_id)->query();
-                $push = true;
+                self::saveQueue($push_data);
                 break;
             }
 
         }
-        return $push;
+        return true;
     }
 
     private static function prefixMessage($message)
@@ -339,14 +332,16 @@ class Events
     public
     static function onWorkerStart($worker)
     {
-        self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
-            '16273', 'cdb_outerroot', 'Libo1234', 'drive');
+      /*  self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
+            '16273', 'cdb_outerroot', 'Libo1234', 'drive');*/
+          self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
+                    '3306', 'root', 'mengant123456', 'drive');
 
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
         self::$http = new Workerman\Http\Client();
 
-        if ($worker->id === 0){
+        if ($worker->id === 0) {
             \Workerman\Lib\Timer::add(5, function () use ($worker) {
                 self::handelDriverNoAnswer();
                 self::handelMiniNoAnswer();
@@ -407,20 +402,22 @@ class Events
                     ]));
                     return;
                 }
+                Gateway::sendToClient($client_id, json_encode([
+                    'errorCode' => 0,
+                    'type' => 'uploadlocation',
+                    'msg' => 'success',
+                    'data' => self::getReceiveLocationIds($locations)
+                ]));
+
                 $arr = explode('-', $u_id);
                 $u_id = $arr[1];
-                $version = 1;
-                if (!empty($message['version'])) {
-                    $version = $message['version'];
-                }
-                $location_ids = self::prefixLocation($version, $client_id, $u_id, $locations, $current);
+                $location_ids = self::prefixLocation($client_id, $u_id, $locations, $current);
                 Gateway::sendToClient($client_id, json_encode([
                     'errorCode' => 0,
                     'type' => 'uploadlocation',
                     'msg' => 'success',
                     'data' => $location_ids
                 ]));
-
             } else if ($type == "receivePush") {
                 $p_id = $message['p_id'];
                 self::receivePush($p_id);
@@ -442,9 +439,6 @@ class Events
                         'msg' => 'fail'
                     ]));
                 }
-
-            } else if ($type == 'canteenConsumption') {
-                self::canteenConsumption($client_id);
 
             }
 
@@ -475,8 +469,33 @@ class Events
     private
     static function receivePush($p_id)
     {
-        self::$db->update('drive_order_push_t')->cols(array('receive' => 1))->where('id=' . $p_id)->query();
+        //删除信息
+        $set = "webSocketReceiveCode";
+        self::$redis->srem($set, $p_id);
 
+    }
+
+    public static function savePushCode()
+    {
+        $set = "webSocketReceiveCode";
+        $sortCode = self::getRandChar(8);
+        self::$redis->sAdd($set, $sortCode);
+        return $sortCode;
+    }
+
+    private static function getRandChar($length)
+    {
+        $str = null;
+        $strPol = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz";
+        $max = strlen($strPol) - 1;
+
+        for ($i = 0;
+             $i < $length;
+             $i++) {
+            $str .= $strPol[rand(0, $max)];
+        }
+
+        return $str;
     }
 
     private
@@ -486,16 +505,12 @@ class Events
     }
 
     private
-    static function prefixLocation($version, $client_id, $u_id, $locations, $current)
+    static function prefixLocation($client_id, $u_id, $locations, $current)
     {
 
         $current_save = false;
         if (!empty($current) && !empty($current['lat']) && !empty($current['lng'])) {
-            if ($version == 1) {
-                self::saveDriverCurrentLocationV2($client_id, $current['lat'], $current['lng'], $u_id);
-            } else {
-                self::saveDriverCurrentLocationV2($client_id, $current['lat'], $current['lng'], $u_id);
-            }
+            self::saveDriverCurrentLocationV2($client_id, $current['lat'], $current['lng'], $u_id);
             $current_save = true;
         }
         if (!count($locations)) {
@@ -510,12 +525,7 @@ class Events
         foreach ($locations as $k => $v) {
             array_push($location_ids, $v['locationId']);
             if (!$current_save && $k == 0) {
-                if ($version == 1) {
-                    self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
-
-                } else {
-                    self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
-                }
+                self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
             }
             self::$db->insert('drive_location_t')->cols(
                 array(
@@ -542,6 +552,13 @@ class Events
 
         }
         return implode(',', $location_ids);
+
+    }
+
+    private static function getReceiveLocationIds($locations)
+    {
+        $idArr = array_column($locations, 'id');
+        return implode(',', $idArr);
 
     }
 
