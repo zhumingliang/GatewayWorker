@@ -332,10 +332,10 @@ class Events
     public
     static function onWorkerStart($worker)
     {
-      /*  self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
-            '16273', 'cdb_outerroot', 'Libo1234', 'drive');*/
-          self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
-                    '3306', 'root', 'mengant123456', 'drive');
+        /*  self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
+              '16273', 'cdb_outerroot', 'Libo1234', 'drive');*/
+        self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
+            '3306', 'root', 'mengant123456', 'drive');
 
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
@@ -469,17 +469,22 @@ class Events
     private
     static function receivePush($p_id)
     {
-        //删除信息
-        $set = "webSocketReceiveCode";
-        self::$redis->srem($set, $p_id);
+        //接受到信息
+        self::$redis->hset($p_id, 'state', 2);
 
     }
 
-    public static function savePushCode()
+    public static function savePushCode($order_id, $driver_id, $type = "normal", $f_d_id = 0)
     {
-        $set = "webSocketReceiveCode";
         $sortCode = self::getRandChar(8);
-        self::$redis->sAdd($set, $sortCode);
+        $data = [
+            'order_id' => $order_id,
+            'driver_id' => $driver_id,
+            'f_d_id' => $f_d_id,
+            'type' => $type,
+            'state' => 2
+        ];
+        self::$redis->hmset($sortCode, $data);
         return $sortCode;
     }
 
