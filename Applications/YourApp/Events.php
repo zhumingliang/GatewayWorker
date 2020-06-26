@@ -158,7 +158,7 @@ class Events
                     'distance' => $distance,
                     'create_time' => $order['create_time'],
                     'limit_time' => time(),
-                    'p_id' => self::savePushCode()
+                    'p_id' => self::savePushCode( $order['id'],$d_id)
                 ];
                 self::saveQueue($push_data);
                 break;
