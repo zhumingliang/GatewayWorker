@@ -82,9 +82,7 @@ class Events
         $rule = "https://tonglingok.com/api/v1/service/sendToDriver";
         self::$http->post($rule, $params, function ($response) {
             $res = $response->getBody();
-            self::saveLog( $res);
-            self::saveLog( json_encode($res));
-
+            $res = json_decode($res, true);
             if ($res['errorCode'] === 0) {
                 return true;
             }
@@ -161,7 +159,7 @@ class Events
                     'distance' => $distance,
                     'create_time' => $order['create_time'],
                     'limit_time' => time(),
-                    'p_id' => self::savePushCode( $order['id'],$d_id)
+                    'p_id' => self::savePushCode($order['id'], $d_id)
                 ];
                 self::saveQueue($push_data);
                 break;
