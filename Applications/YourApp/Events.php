@@ -469,7 +469,7 @@ class Events
     private
     static function receivePush($p_id)
     {
-        //接受到信息
+        //接受到-信息
         self::$redis->hset($p_id, 'state', 2);
 
     }
@@ -482,7 +482,7 @@ class Events
             'driver_id' => $driver_id,
             'f_d_id' => $f_d_id,
             'type' => $type,
-            'state' => 2
+            'state' => 1
         ];
         self::$redis->hmset($sortCode, $data);
         return $sortCode;
