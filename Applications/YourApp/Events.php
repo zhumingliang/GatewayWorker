@@ -82,6 +82,9 @@ class Events
         $rule = "https://tonglingok.com/api/v1/service/sendToDriver";
         self::$http->post($rule, $params, function ($response) {
             $res = $response->getBody();
+            self::saveLog( $res);
+            self::saveLog( json_encode($res));
+
             if ($res['errorCode'] === 0) {
                 return true;
             }
