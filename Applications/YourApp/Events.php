@@ -477,7 +477,7 @@ class Events
 
     public static function savePushCode($order_id, $driver_id, $type = "normal", $f_d_id = 0)
     {
-        $sortCode = self::getRandChar(8);
+        $sortCode = $order_id;
         $data = [
             'order_id' => $order_id,
             'driver_id' => $driver_id,
@@ -485,7 +485,7 @@ class Events
             'type' => $type,
             'state' => 1
         ];
-        self::$redis->hmset($sortCode, $data);
+        self::$redis->hmset($sortCode, $data, 45);
         return $sortCode;
     }
 
