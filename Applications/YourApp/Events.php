@@ -485,7 +485,8 @@ class Events
             'type' => $type,
             'state' => 1
         ];
-        self::$redis->hmset($sortCode, $data, 45);
+        self::saveLog(json_encode($data));
+        self::$redis->hmset($sortCode, $data);
         return $sortCode;
     }
 
