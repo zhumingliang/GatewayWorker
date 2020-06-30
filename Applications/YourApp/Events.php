@@ -112,7 +112,7 @@ class Events
         //查询所有司机并按距离排序
         $lat = $order['start_lat'];
         $lng = $order['start_lng'];
-        self::saveLog("lat:$lat");
+        $order_id = $order['id'];
         $driver_location_key = "driver:location:$company_id";
         $list = self::$redis->rawCommand('georadius',
             $driver_location_key, $lng, $lat,
@@ -124,13 +124,13 @@ class Events
         //设置三个set: 司机未接单 driver_order_no；司机正在派单 driver_order_ing；司机已经接单 driver_order_receive
         foreach ($list as $k => $v) {
             $d_id = $v;
-            $checkDriver = self::checkDriverCanReceiveOrder($d_id);
+            $checkDriver = self::checkDriverCanReceiveOrder($d_id, $order_id);
             if ($checkDriver) {
-                self::saveLog("order_id:$order->id");
-                $check = self::checkDriverPush($order->id, $d_id);
-                if ($check == 2) {
-                    continue;
-                }
+                /*  self::saveLog("order_id:$order->id");
+                  $check = self::checkDriverPush($order_id, $d_id);
+                  if ($check == 2) {
+                      continue;
+                  }*/
 
                 //将司机从'未接单'移除，添加到：正在派单
                 self::$redis->sRem('driver_order_no:' . $company_id, $d_id);
@@ -204,7 +204,7 @@ class Events
         ];
     }
 
-    public static function checkDriverCanReceiveOrder($d_id)
+    public static function checkDriverCanReceiveOrder($d_id, $order_id)
     {
         if (!Gateway::isUidOnline('driver' . '-' . $d_id)) {
             return false;
@@ -213,6 +213,9 @@ class Events
         $company_id = empty($company_id) ? 1 : $company_id;
 
         if (!(self::$redis->sIsMember('driver_order_no:' . $company_id, $d_id))) {
+            return false;
+        }
+        if (self::$redis->sIsMember("refuse:$order_id", $d_id)) {
             return false;
         }
         //检测司机是否刚刚完成订单，间隔时间不能小于30秒
