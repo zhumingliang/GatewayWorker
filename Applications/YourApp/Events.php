@@ -112,6 +112,7 @@ class Events
         //查询所有司机并按距离排序
         $lat = $order['start_lat'];
         $lng = $order['start_lng'];
+        self::saveLog("lat:$lat");
         $driver_location_key = "driver:location:$company_id";
         $list = self::$redis->rawCommand('georadius',
             $driver_location_key, $lng, $lat,
@@ -125,6 +126,7 @@ class Events
             $d_id = $v;
             $checkDriver = self::checkDriverCanReceiveOrder($d_id);
             if ($checkDriver) {
+                self::saveLog("order_id:$order->id");
                 $check = self::checkDriverPush($order->id, $d_id);
                 if ($check == 2) {
                     continue;
@@ -485,7 +487,6 @@ class Events
             'type' => $type,
             'state' => 1
         ];
-        self::saveLog(json_encode($data));
         self::$redis->hmset($sortCode, $data);
         return $sortCode;
     }
