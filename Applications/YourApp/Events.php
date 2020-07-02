@@ -476,6 +476,7 @@ class Events
     static function receivePush($p_id)
     {
         //接受到-信息
+        $p_id = (int)($p_id);
         self::$redis->hset($p_id, 'state', 2);
 
     }
