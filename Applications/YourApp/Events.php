@@ -343,6 +343,7 @@ class Events
         self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
             '3306', 'root', 'mengant123456', 'drive');
 
+
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
         self::$http = new Workerman\Http\Client();
@@ -446,8 +447,10 @@ class Events
                     ]));
                 }
 
+            } else if ($type == "test") {
+                $mysql = DataBase::mysql();
+                self::saveLog(json_encode($mysql));
             }
-
         } catch (Exception $e) {
             Gateway::sendToClient($client_id, json_encode([
                 'errorCode' => 3,
