@@ -338,16 +338,15 @@ class Events
     public
     static function onWorkerStart($worker)
     {
-        /*  self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
-              '16273', 'cdb_outerroot', 'Libo1234', 'drive');*/
-        self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
-            '3306', 'root', 'mengant123456', 'drive');
-
+        self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
+            '16273', 'cdb_outerroot', 'Libo1234', 'drive');
+        /*  self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
+              '3306', 'root', 'mengant123456', 'drive');
+  */
 
         self::$redis = new Redis();
         self::$redis->connect('127.0.0.1', 6379, 60);
         self::$http = new Workerman\Http\Client();
-
         if ($worker->id === 0) {
             \Workerman\Lib\Timer::add(5, function () use ($worker) {
                 self::handelDriverNoAnswer();
