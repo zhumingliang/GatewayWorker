@@ -277,16 +277,12 @@ class Events
                 break;
             }
             $state = self::$redis->hGet($pId, 'state');
+            $orderId = self::$redis->hGet($pId, 'o_id');
             $driverId = self::$redis->hGet($pId, 'driver_id');
             $companyId = self::$redis->hGet($pId, 'company_id');
-            self::saveLog('state:' . $state);
-            self::saveLog('driverId:' . $driverId);
-            self::saveLog('companyId:' . $companyId);
             if ($state == 2) {
                 //司机端接受但是未处理
                 $receiveTime = self::$redis->hGet($pId, 'receive_time');
-                self::saveLog('$receiveTime:' . $receiveTime);
-
                 if (time() > $receiveTime + 45) {
                     self::saveLog('$receiveTime:' . time());
 
@@ -297,8 +293,8 @@ class Events
                     self::$redis->sAdd('driver_order_no:' . $companyId, $driverId);
 
                     //将订单由正在处理集合改为未处理集合
-                    self::$redis->sRem('order:ing', $driverId);
-                    self::$redis->sAdd('order:no', $driverId);
+                    self::$redis->sRem('order:ing', $orderId);
+                    self::$redis->sAdd('order:no', $orderId);
 
                 } else {
                     self::$redis->lpush('driver_receive_push', $pId);
