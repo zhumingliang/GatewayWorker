@@ -277,7 +277,7 @@ class Events
                 break;
             }
             $state = self::$redis->hGet($pId, 'state');
-            $orderId = self::$redis->hGet($pId, 'o_id');
+            $orderId = self::$redis->hGet($pId, 'order_id');
             $driverId = self::$redis->hGet($pId, 'driver_id');
             $companyId = self::$redis->hGet($pId, 'company_id');
             if ($state == 2) {
