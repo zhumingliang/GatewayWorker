@@ -288,6 +288,8 @@ class Events
                 self::saveLog('$receiveTime:'.$receiveTime);
 
                 if (time() > $receiveTime + 45) {
+                    self::saveLog('$receiveTime:'.time() );
+
                     //司机接单超时
                     //1.恢复订单;2.释放司机
                     self::$redis->sRem('driver_order_receive:' . $companyId, $driverId);
