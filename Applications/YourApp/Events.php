@@ -155,7 +155,7 @@ class Events
                     'distance' => $distance,
                     'create_time' => $order['create_time'],
                     'limit_time' => time(),
-                    'p_id' => self::savePushCode($company_id,$order['id'], $d_id)
+                    'p_id' => self::savePushCode($company_id, $order['id'], $d_id)
                 ];
                 self::saveQueue($push_data);
                 break;
@@ -272,12 +272,16 @@ class Events
     public static function handleDriverNoAnswer()
     {
         for ($i = 0; $i < 10; $i++) {
-            $pId = self::$redis->sPop('driver_receive_push');
+            $pId = self::$redis->lpop('driver_receive_push');
+            self::saveLog('noanswer:p_id' . $pId);
             if (!$pId) {
                 return true;
             }
             $push = self::$redis->hGet($pId);
             $state = $push['state'];
+            self::saveLog('noanswer:push' . json_encode($push));
+            self::saveLog('noanswer:state' . $state);
+
             $driverId = $push['driver_id'];
             $companyId = $push['company_id'];
             if ($state == 2) {
@@ -285,7 +289,8 @@ class Events
                 $receiveTime = $push['receive_time'];
                 if (time() > $receiveTime + 45) {
                     //司机接单超时
-                    //1.恢复订单;2.释放司机                    self::$redis->sRem('driver_order_receive:' . $companyId, $driverId);
+                    //1.恢复订单;2.释放司机
+                    self::$redis->sRem('driver_order_receive:' . $companyId, $driverId);
                     self::$redis->sRem('driver_order_ing:' . $companyId, $driverId);
                     self::$redis->sAdd('driver_order_no:' . $companyId, $driverId);
 
@@ -323,12 +328,12 @@ class Events
                 self::handleMiniNoAnswer();
             });
         }
-       /* if ($worker->id === 1) {
-            \Workerman\Lib\Timer::add(10, function () use ($worker) {
-                self::handleDriverNoAnswer();
-                self::handleMiniNoAnswer();
-            });
-        }*/
+        /* if ($worker->id === 1) {
+             \Workerman\Lib\Timer::add(10, function () use ($worker) {
+                 self::handleDriverNoAnswer();
+                 self::handleMiniNoAnswer();
+             });
+         }*/
 
     }
 
@@ -459,10 +464,10 @@ class Events
         self::$redis->hset($p_id, 'receive_time', time());
 
         //将接受信息存储-45秒后判断司机是否有处理（接单/拒单）
-        self::$redis->sAdd('driver_receive_push', $p_id);
+        self::$redis->lpush('driver_receive_push', $p_id);
     }
 
-    public static function savePushCode($company_id,$order_id, $driver_id, $type = "normal", $f_d_id = 0)
+    public static function savePushCode($company_id, $order_id, $driver_id, $type = "normal", $f_d_id = 0)
     {
         $sortCode = $order_id;
         $data = [
