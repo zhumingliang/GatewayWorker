@@ -126,12 +126,6 @@ class Events
             $d_id = $v;
             $checkDriver = self::checkDriverCanReceiveOrder($d_id, $order_id);
             if ($checkDriver) {
-                /*  self::saveLog("order_id:$order->id");
-                  $check = self::checkDriverPush($order_id, $d_id);
-                  if ($check == 2) {
-                      continue;
-                  }*/
-
                 //将司机从'未接单'移除，添加到：正在派单
                 self::$redis->sRem('driver_order_no:' . $company_id, $d_id);
                 self::$redis->sRem('driver_order_receive:' . $company_id, $d_id);
@@ -161,7 +155,7 @@ class Events
                     'distance' => $distance,
                     'create_time' => $order['create_time'],
                     'limit_time' => time(),
-                    'p_id' => self::savePushCode($order['id'], $d_id)
+                    'p_id' => self::savePushCode($company_id,$order['id'], $d_id)
                 ];
                 self::saveQueue($push_data);
                 break;
@@ -241,30 +235,8 @@ class Events
         return false;
     }
 
-    private static function checkDriverPush($o_id, $d_id)
-    {
-        $pushes = self::$db->select('*')
-            ->from('drive_order_push_t')
-            ->where('o_id= :order_id AND d_id= :driver_id AND receive= :receive_state')
-            ->bindValues(array('order_id' => $o_id, 'driver_id' => $d_id, 'receive_state' => 1))
-            ->query();
 
-        if (!count($pushes)) {
-            return 1;
-        }
-        foreach ($pushes as $k => $v) {
-            if ($v['state'] == 3) {
-                return 2;
-                break;
-            }
-        }
-        if (count($pushes) >= 3) {
-            return 2;
-        }
-        return 1;
-    }
-
-    public static function handelMiniNoAnswer()
+    public static function handleMiniNoAnswer()
     {
         $push = self::$db->query("SELECT * FROM `drive_mini_push_t` WHERE state <> 3 AND count < 10");
 
@@ -294,41 +266,39 @@ class Events
 
     }
 
-    public static function handelDriverNoAnswer()
+    /**
+     * 司机受收到订单推送信息但是没有及时处理需要修改司机的状态
+     */
+    public static function handleDriverNoAnswer()
     {
-        $push = self::$db->select('*')
-            ->from('drive_order_push_t')
-            ->where('state= :order_state')
-            ->bindValues(array('order_state' => 1))
-            ->query();
-
-        if (count($push)) {
-            foreach ($push as $k => $v) {
-                $d_id = $v['d_id'];
-                $order_id = $v['o_id'];
-                $company_id = self::$redis->hGet('driver:' . $d_id, 'company_id');
-                if (time() > $v['limit_time'] + 45) {
-                    self::$redis->sRem('driver_order_receive:' . $company_id, $d_id);
-                    self::$redis->sRem('driver_order_ing:' . $company_id, $d_id);
-                    self::$redis->sAdd('driver_order_no:' . $company_id, $d_id);
+        for ($i = 0; $i < 10; $i++) {
+            $pId = self::$redis->sPop('driver_receive_push');
+            if (!$pId) {
+                return true;
+            }
+            $push = self::$redis->hGet($pId);
+            $state = $push['state'];
+            $driverId = $push['driver_id'];
+            $companyId = $push['company_id'];
+            if ($state == 2) {
+                //司机端接受但是未处理
+                $receiveTime = $push['receive_time'];
+                if (time() > $receiveTime + 45) {
+                    //司机接单超时
+                    //1.恢复订单;2.释放司机
+                    self::$redis->sRem('driver_order_receive:' . $companyId, $driverId);
+                    self::$redis->sRem('driver_order_ing:' . $companyId, $driverId);
+                    self::$redis->sAdd('driver_order_no:' . $companyId, $driverId);
 
                     //将订单由正在处理集合改为未处理集合
-                    self::$redis->sRem('order:ing', $order_id);
-                    self::$redis->sAdd('order:no', $order_id);
+                    self::$redis->sRem('order:ing', $driverId);
+                    self::$redis->sAdd('order:no', $driverId);
 
-                    self::$db->update('drive_order_push_t')->cols(array('state' => 4))->where('id=' . $v['id'])->query();
-                } else {
-
-                    if ($v['receive'] == 2 && !empty($v['message'])
-                        && Gateway::isUidOnline('driver' . '-' . $d_id)
-                        && (self::checkDriverOnline($d_id))) {
-                        Gateway::sendToUid('driver' . '-' . $d_id, self::prefixMessage(json_decode($v['message'], true)));
-                    }
                 }
             }
-
-
         }
+
+
     }
 
 
@@ -349,11 +319,16 @@ class Events
         self::$http = new Workerman\Http\Client();
         if ($worker->id === 0) {
             \Workerman\Lib\Timer::add(5, function () use ($worker) {
-                self::handelDriverNoAnswer();
-                self::handelMiniNoAnswer();
                 self::orderHandel();
             });
         }
+        if ($worker->id === 1) {
+            \Workerman\Lib\Timer::add(10, function () use ($worker) {
+                self::handleDriverNoAnswer();
+                self::handleMiniNoAnswer();
+            });
+        }
+
     }
 
 
@@ -477,16 +452,20 @@ class Events
     private
     static function receivePush($p_id)
     {
-        //接受到-信息
+        //接受信息未处理
         $p_id = (int)($p_id);
         self::$redis->hset($p_id, 'state', 2);
+        self::$redis->hset($p_id, 'receive_time', time());
 
+        //将接受信息存储-45秒后判断司机是否有处理（接单/拒单）
+        self::$redis->sAdd('driver_receive_push', $p_id);
     }
 
-    public static function savePushCode($order_id, $driver_id, $type = "normal", $f_d_id = 0)
+    public static function savePushCode($company_id,$order_id, $driver_id, $type = "normal", $f_d_id = 0)
     {
         $sortCode = $order_id;
         $data = [
+            'company_id' => $company_id,
             'order_id' => $order_id,
             'driver_id' => $driver_id,
             'f_d_id' => $f_d_id,
