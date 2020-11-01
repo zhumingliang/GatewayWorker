@@ -285,8 +285,7 @@ class Events
                 $receiveTime = $push['receive_time'];
                 if (time() > $receiveTime + 45) {
                     //司机接单超时
-                    //1.恢复订单;2.释放司机
-                    self::$redis->sRem('driver_order_receive:' . $companyId, $driverId);
+                    //1.恢复订单;2.释放司机                    self::$redis->sRem('driver_order_receive:' . $companyId, $driverId);
                     self::$redis->sRem('driver_order_ing:' . $companyId, $driverId);
                     self::$redis->sAdd('driver_order_no:' . $companyId, $driverId);
 
@@ -320,14 +319,16 @@ class Events
         if ($worker->id === 0) {
             \Workerman\Lib\Timer::add(5, function () use ($worker) {
                 self::orderHandel();
-            });
-        }
-        if ($worker->id === 1) {
-            \Workerman\Lib\Timer::add(10, function () use ($worker) {
                 self::handleDriverNoAnswer();
                 self::handleMiniNoAnswer();
             });
         }
+       /* if ($worker->id === 1) {
+            \Workerman\Lib\Timer::add(10, function () use ($worker) {
+                self::handleDriverNoAnswer();
+                self::handleMiniNoAnswer();
+            });
+        }*/
 
     }
 
