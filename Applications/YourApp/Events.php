@@ -275,7 +275,7 @@ class Events
             $pId = self::$redis->lpop('driver_receive_push');
             self::saveLog('noanswer:p_id' . $pId);
             if (!$pId) {
-                return true;
+                break;
             }
             $push = self::$redis->hGet($pId);
             $state = $push['state'];
@@ -462,7 +462,7 @@ class Events
         $p_id = (int)($p_id);
         self::$redis->hset($p_id, 'state', 2);
         self::$redis->hset($p_id, 'receive_time', time());
-
+        self::saveLog("p_id:" . $p_id . ";" . "data:" .self::$redis->hget($p_id));
         //将接受信息存储-45秒后判断司机是否有处理（接单/拒单）
         self::$redis->lpush('driver_receive_push', $p_id);
     }
