@@ -279,16 +279,16 @@ class Events
             $state = self::$redis->hGet($pId, 'state');
             $driverId = self::$redis->hGet($pId, 'driver_id');
             $companyId = self::$redis->hGet($pId, 'company_id');
-            self::saveLog('state:'.$state);
-            self::saveLog('driverId:'.$driverId);
-            self::saveLog('companyId:'.$companyId);
+            self::saveLog('state:' . $state);
+            self::saveLog('driverId:' . $driverId);
+            self::saveLog('companyId:' . $companyId);
             if ($state == 2) {
                 //司机端接受但是未处理
                 $receiveTime = self::$redis->hGet($pId, 'receive_time');
-                self::saveLog('$receiveTime:'.$receiveTime);
+                self::saveLog('$receiveTime:' . $receiveTime);
 
                 if (time() > $receiveTime + 45) {
-                    self::saveLog('$receiveTime:'.time() );
+                    self::saveLog('$receiveTime:' . time());
 
                     //司机接单超时
                     //1.恢复订单;2.释放司机
@@ -300,6 +300,8 @@ class Events
                     self::$redis->sRem('order:ing', $driverId);
                     self::$redis->sAdd('order:no', $driverId);
 
+                } else {
+                    self::$redis->lpush('driver_receive_push', $pId);
                 }
             }
         }
