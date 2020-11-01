@@ -273,20 +273,15 @@ class Events
     {
         for ($i = 0; $i < 10; $i++) {
             $pId = self::$redis->lpop('driver_receive_push');
-            self::saveLog('noanswer:p_id' . $pId);
             if (!$pId) {
                 break;
             }
-            $push = self::$redis->hGet($pId);
-            $state = $push['state'];
-            self::saveLog('noanswer:push' . json_encode($push));
-            self::saveLog('noanswer:state' . $state);
-
-            $driverId = $push['driver_id'];
-            $companyId = $push['company_id'];
+            $state = self::$redis->hGet($pId, 'state');
+            $driverId = self::$redis->hGet($pId, 'driver_id');
+            $companyId = self::$redis->hGet($pId, 'company_id');
             if ($state == 2) {
                 //司机端接受但是未处理
-                $receiveTime = $push['receive_time'];
+                $receiveTime = self::$redis->hGet($pId, 'receive_time');
                 if (time() > $receiveTime + 45) {
                     //司机接单超时
                     //1.恢复订单;2.释放司机
@@ -462,7 +457,6 @@ class Events
         $p_id = (int)($p_id);
         self::$redis->hset($p_id, 'state', 2);
         self::$redis->hset($p_id, 'receive_time', time());
-        self::saveLog("p_id:" . $p_id . ";" . "data:" .self::$redis->hget($p_id));
         //将接受信息存储-45秒后判断司机是否有处理（接单/拒单）
         self::$redis->lpush('driver_receive_push', $p_id);
     }
