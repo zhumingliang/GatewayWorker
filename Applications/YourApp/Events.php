@@ -525,7 +525,7 @@ class Events
             if (!$current_save && $k == 0) {
                 self::saveDriverCurrentLocationV2($client_id, $v['lat'], $v['lng'], $u_id);
             }
-            self::$db->insert('drive_location_t')->cols(
+         /*   self::$db->insert('drive_location_t')->cols(
                 array(
                     'lat' => $v['lat'],
                     'lng' => $v['lng'],
@@ -546,7 +546,7 @@ class Events
                     'begin' => key_exists('begin', $v) ? $v['begin'] : 2,
                     'u_id' => $u_id
                 )
-            )->query();
+            )->query();*/
 
         }
         return implode(',', $location_ids);
