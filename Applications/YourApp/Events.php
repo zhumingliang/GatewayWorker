@@ -312,7 +312,7 @@ class Events
     public
     static function onWorkerStart($worker)
     {
-        self::$db = new \Workerman\MySQL\Connection('124.70.190.22',
+        self::$db = new \Workerman\MySQL\Connection('139.9.106.80',
             '3306', 'cdb_outerroot', '6DYOFCjmCVMP', 'drive');
         /*  self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
               '3306', 'root', 'mengant123456', 'drive');
