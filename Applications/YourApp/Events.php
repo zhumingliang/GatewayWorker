@@ -312,8 +312,8 @@ class Events
     public
     static function onWorkerStart($worker)
     {
-        self::$db = new \Workerman\MySQL\Connection('55a32a9887e03.gz.cdb.myqcloud.com',
-            '16273', 'cdb_outerroot', 'Libo1234', 'drive');
+        self::$db = new \Workerman\MySQL\Connection('124.70.190.22',
+            '3306', 'cdb_outerroot', '6DYOFCjmCVMP', 'drive');
         /*  self::$db = new \Workerman\MySQL\Connection('127.0.0.1',
               '3306', 'root', 'mengant123456', 'drive');
   */
